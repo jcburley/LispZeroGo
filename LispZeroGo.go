@@ -18,11 +18,12 @@
 package main
 
 import "bufio"
-import "io"
-import "os"
+import "bytes"
 import "fmt"
 import "github.com/elliotchance/c2go/linux"
 import "github.com/elliotchance/c2go/noarch"
+import "io"
+import "os"
 import "strings"
 import "unsafe"
 
@@ -1006,89 +1007,25 @@ func binding_lookup(what *byte, key *Symbol_s, bindings *Object_s) *Object_s {
 	return p_nil
 }
 
-var token_lookahead *byte
-var lookahead_valid int32 = int32(0)
+var token_lookahead string
+var lookahead_valid bool = false
 
-type buffer_s struct {
-	size     size_t
-	used     size_t
-	contents *byte
+func buffer_append(buf *bytes.Buffer, ch byte) {
+	err := buf.WriteByte(ch)
+	check(err)
 }
 
-// buffer_new - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:645
-/* Input */ //
-//
-func buffer_new(initial_size size_t) *buffer_s {
-	var buf *buffer_s = (*buffer_s)(noarch.Malloc(int32(24)))
-	var contents *byte = (*byte)(noarch.Malloc(int32(uint32((size_t(initial_size))))))
-	if buf == nil || contents == nil {
-		for {
-			var m *byte = (&[]byte("cannot allocate buffer for lexemes\x00")[0])
-			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
-			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
-			}
-			noarch.Exit((int32(998)))
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
-	}
-	(*buf).size = initial_size
-	(*buf).used = size_t(int32(0))
-	(*buf).contents = contents
-	return buf
-}
-
-// buffer_append - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:660
-/* TODO: realloc() */ //
-//
-func buffer_append(buf *buffer_s, ch byte) {
-	if size_t((*buf).used) >= size_t((*buf).size) {
-		for {
-			var m *byte = (&[]byte("lexeme too long for this build\x00")[0])
-			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
-			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
-			}
-			noarch.Exit((int32(997)))
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
-	}
-	*((*byte)(func() unsafe.Pointer {
-		tempVar := (*buf).contents
-		return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(int32(uint32((func() size_t {
-			tempVar := &(*buf).used
-			defer func() {
-				*tempVar += 1
-			}()
-			return *tempVar
-		}()))))*unsafe.Sizeof(*tempVar))
-	}())) = ch
-}
-
-// buffer_tostring - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:667
-func buffer_tostring(buf *buffer_s) *byte {
-	buffer_append(buf, '\x00')
-	return (*buf).contents
+func buffer_to_string(buf *bytes.Buffer) string {
+	return string(buf.Bytes())
 }
 
 // token_putback - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:675
-func token_putback(token *byte) {
-	func() {
-		if (map[bool]int32{false: 0, true: 1}[lookahead_valid == int32(0)]) != 0 {
-		} else {
-			linux.AssertFail((&[]byte("lookahead_valid == 0\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(677)), (&[]byte("void print_number(int *)\x00")[0]))
-		}
-	}()
+func token_putback(token string) {
+	if lookahead_valid {
+		linux.AssertFail((&[]byte("lookahead_valid is true!\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(677)), (&[]byte("void print_number(int *)\x00")[0]))
+	}
 	token_lookahead = token
-	lookahead_valid = int32(1)
+	lookahead_valid = true
 }
 
 func my_getc(input *bufio.Reader) int32 {
@@ -1105,14 +1042,13 @@ func my_ungetc(ch int32, input *bufio.Reader) {
 }
 
 // token_get - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:707
-func token_get(input *bufio.Reader, buf *buffer_s) (c2goDefaultReturn *byte) {
+func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 	var ch int32
-	func() size_t {
-		(*(buf)).used = size_t(int32(0))
-		return (*(buf)).used
-	}()
-	if lookahead_valid != 0 {
-		lookahead_valid = int32(0)
+
+	buf.Reset()
+
+	if lookahead_valid {
+		lookahead_valid = false
 		return token_lookahead
 	}
 	for {
@@ -1155,7 +1091,7 @@ func token_get(input *bufio.Reader, buf *buffer_s) (c2goDefaultReturn *byte) {
 	}
 	buffer_append(buf, byte(ch))
 	if noarch.Strchr((&[]byte("()'\x00")[0]), ch) != nil {
-		return buffer_tostring(buf)
+		return buffer_to_string(buf)
 	}
 	for {
 		if (func() int32 {
@@ -1182,11 +1118,10 @@ func token_get(input *bufio.Reader, buf *buffer_s) (c2goDefaultReturn *byte) {
 			return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)((ch))*unsafe.Sizeof(*tempVar))
 		}())))&int32(uint16(_ISspace)) != 0 {
 			my_ungetc(ch, input)
-			return buffer_tostring(buf)
+			return buffer_to_string(buf)
 		}
 		buffer_append(buf, byte(ch))
 	}
-	return
 }
 
 var latest_lineno uint32
@@ -1205,17 +1140,16 @@ func cstr_to_string(token *byte) string {
 }
 
 // object_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:751
-func object_read(input *bufio.Reader, buf *buffer_s) *Object_s {
-	var token *byte
-	token = token_get(input, buf)
-	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte("(\x00")[0]))) != 0 {
+func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
+	token := token_get(input, buf)
+	if token == "(" {
 		return list_read(input, buf)
 	}
-	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte("'\x00")[0]))) != 0 {
+	if token == "'" {
 		var tmp *Object_s = object_read(input, buf)
 		return object_new(object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_quote)))), object_new(tmp, p_nil))
 	}
-	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte(")\x00")[0]))) != 0 {
+	if token == ")" {
 		for {
 			var m *byte = (&[]byte("unbalanced close paren\x00")[0])
 			if m != nil {
@@ -1234,21 +1168,21 @@ func object_read(input *bufio.Reader, buf *buffer_s) *Object_s {
 		latest_lineno = lineno
 		noarch.Fprintf(stderr, (&[]byte("%s:%d: Seen `%s'.\n\x00")[0]), filename, lineno, token)
 	}
-	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(cstr_to_string(token))))))
+	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
 }
 
 // list_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:781
 /* Make sure we first read the object before going on to read the rest of the list. */ //
 //
-func list_read(input *bufio.Reader, buf *buffer_s) *Object_s {
-	var token *byte = token_get(input, buf)
+func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
+	var token string = token_get(input, buf)
 	var tmp *Object_s
-	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte(")\x00")[0]))) != 0 {
+	if token == ")" {
 		return p_nil
 	}
-	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte(".\x00")[0]))) != 0 {
+	if token == "." {
 		tmp = object_read(input, buf)
-		if noarch.Strcmp(token_get(input, buf), (&[]byte(")\x00")[0])) != 0 {
+		if token_get(input, buf) != ")" {
 			for {
 				var m *byte = (&[]byte("missing close parenthese for simple list\x00")[0])
 				if m != nil {
@@ -1741,10 +1675,12 @@ func main() {
 		noarch.Fprintf(stderr, (&[]byte("Excess command-line arguments starting with: %s\n\x00")[0]), *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))))
 		os.Exit(int(int32(98)))
 	}
+
 	map_sym = make(Symbol_MAP)
-	var buf *buffer_s
+	var buf *bytes.Buffer = new(bytes.Buffer)
+
 	initialize()
-	buf = buffer_new(size_t(int32(1000)))
+
 	for {
 		var obj *Object_s = object_read(in, buf)
 		if int8((noarch.NotInt8(quiet))) != 0 {
