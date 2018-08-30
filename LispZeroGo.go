@@ -701,34 +701,6 @@ var tracing int8 = int8((int8(int32(0))))
 var allocations uint64_t = uint64_t(int32(0))
 var allocations_total uint64_t = uint64_t(int32(0))
 
-// string_duplicate - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:334
-/* Heap. */ //
-//
-func string_duplicate(str *byte) *byte {
-	var l size_t = size_t((uint32(noarch.Strlen(str) + int32(uint32(int32(1))))))
-	var dup *byte = (*byte)(noarch.Malloc(int32(uint32((size_t(l))))))
-	if dup == nil {
-		for {
-			var // Warning: using unsafe slice cast to convert from []byte to []byte
-			m *byte = (&[]byte("insufficient memory for duplicating a string\x00")[0])
-			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
-			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
-			}
-			noarch.Exit((int32(998)))
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
-	}
-	noarch.Memcpy(unsafe.Pointer(dup), unsafe.Pointer(str), int32(uint32((size_t(l)))))
-	allocations += 1
-	allocations_total += uint64_t((uint32(noarch.Strlen(str))))
-	return dup
-}
-
 type compiled_fn func(*byte, *Object_s, *Object_s) *Object_s
 type Symbol_s struct {
 	n string
