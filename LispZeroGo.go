@@ -694,355 +694,6 @@ const _IScntrl uint16 = ((1 << 9) >> 8)
 const _ISpunct uint16 = ((1 << 10) >> 8)
 const _ISalnum uint16 = ((1 << 11) >> 8)
 
-type map_node_t map_node_s
-type map_node_s struct {
-	hash  uint32
-	value unsafe.Pointer
-	next  *map_node_t
-}
-type map_base_s struct {
-	buckets  **map_node_t
-	nbuckets uint32
-	nnodes   uint32
-}
-type map_iter_s struct {
-	bucketidx uint32
-	node      *map_node_t
-}
-type voidp_MAP struct {
-	base map_base_s
-	ref  *unsafe.Pointer
-	tmp  unsafe.Pointer
-}
-type map_void_t voidp_MAP
-type charp_MAP struct {
-	base map_base_s
-	ref  **byte
-	tmp  *byte
-}
-type map_str_t charp_MAP
-type int_MAP struct {
-	base map_base_s
-	ref  *int32
-	tmp  int32
-}
-type map_int_t int_MAP
-type char_MAP struct {
-	base map_base_s
-	ref  *byte
-	tmp  byte
-}
-type map_char_t char_MAP
-type float_MAP struct {
-	base map_base_s
-	ref  *float32
-	tmp  float32
-}
-type map_float_t float_MAP
-type double_MAP struct {
-	base map_base_s
-	ref  *float64
-	tmp  float64
-}
-type map_double_t double_MAP
-
-// map_hash - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:121
-/* A Lisp version 0 interpreter
-   Copyright (c) 2010 James Craig Burley <james@jcb-sc.com>
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License , or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program. If not, write to the Free Software
-   Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
-*/ //
-/* Cloned and wildly modified from
-   http://www.sonoma.edu/users/l/luvisi/sl3.c by Andru Luvisi.
-
-   Zero version implements "first" version of Lisp via Lisp code on
-   top of builtin functions quote, atom, eq, cons, car, cdr, and cond,
-   along with builtin recursive evaluations of the arguments to those
-   functions where appropriate.
-
-   This version incorporate the map.c source file, to comprise a
-   single source file, easing use of c2go to convert it to Go and
-   build it from there.
-*/ //
-/**
- * Copyright (c) 2014 rxi
- *
- * This library is free software; you can redistribute it and/or modify it
- * under the terms of the MIT license. See LICENSE for details.
- */ //
-/* char key[]; */ //
-/* char value[]; */ //
-//
-func map_hash(str *byte) uint32 {
-	var hash uint32 = uint32(int32(5381))
-	for *str != 0 {
-		hash = hash<<uint64(int32(5)) + hash ^ uint32(*func() *byte {
-			defer func() {
-				str = ((*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(str)) + (uintptr)(1)*unsafe.Sizeof(*str))))
-			}()
-			return str
-		}())
-	}
-	return hash
-}
-
-// map_newnode - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:130
-func map_newnode(key *byte, value unsafe.Pointer, vsize int32) *map_node_t {
-	var node *map_node_t
-	var ksize int32 = noarch.Strlen(key) + int32(uint32(int32(1)))
-	var voffset int32 = int32(uint32(ksize) + (8-uint32(ksize))%8)
-	node = (*map_node_t)(noarch.Malloc(int32(24 + uint32(voffset) + uint32(vsize))))
-	if node == nil {
-		return nil
-	}
-	noarch.Memcpy(unsafe.Pointer(((*map_node_t)(unsafe.Pointer(uintptr(unsafe.Pointer(node)) + (uintptr)(int32(1))*unsafe.Sizeof(*node))))), unsafe.Pointer(key), int32(uint32(ksize)))
-	(*node).hash = map_hash(key)
-	(*node).value = unsafe.Pointer(((*byte)(func() unsafe.Pointer {
-		tempVar := (*byte)(unsafe.Pointer(((*map_node_t)(unsafe.Pointer(uintptr(unsafe.Pointer(node)) + (uintptr)(int32(1))*unsafe.Sizeof(*node))))))
-		return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(voffset)*unsafe.Sizeof(*tempVar))
-	}())))
-	noarch.Memcpy((*node).value, value, int32(uint32(vsize)))
-	return node
-}
-
-// map_bucketidx - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:144
-/* If the implementation is changed to allow a non-power-of-2 bucket count,
- * the line below should be changed to use mod instead of AND */ //
-//
-func map_bucketidx(m *map_base_s, hash uint32) int32 {
-	return int32(hash & ((*m).nbuckets - uint32(int32(1))))
-}
-
-// map_addnode - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:151
-func map_addnode(m *map_base_s, node *map_node_t) {
-	var n int32 = map_bucketidx(m, (*node).hash)
-	(*node).next = *((**map_node_t)(func() unsafe.Pointer {
-		tempVar := (*m).buckets
-		return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(n)*unsafe.Sizeof(*tempVar))
-	}()))
-	*((**map_node_t)(func() unsafe.Pointer {
-		tempVar := (*m).buckets
-		return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(n)*unsafe.Sizeof(*tempVar))
-	}())) = node
-}
-
-// map_resize - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:158
-/* Chain all nodes together */ //
-/* Reset buckets */ //
-/* Re-add nodes to buckets */ //
-/* Return error code if malloc() failed */ //
-//
-func map_resize(m *map_base_s, nbuckets int32) int32 {
-	var nodes *map_node_t
-	var node *map_node_t
-	var next *map_node_t
-	var buckets **map_node_t
-	var i int32
-	nodes = nil
-	i = int32((*m).nbuckets)
-	for func() int32 {
-		defer func() {
-			i -= 1
-		}()
-		return i
-	}() != 0 {
-		node = *((**map_node_t)(func() unsafe.Pointer {
-			tempVar := ((*m).buckets)
-			return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(i)*unsafe.Sizeof(*tempVar))
-		}()))
-		for node != nil {
-			next = (*node).next
-			(*node).next = nodes
-			nodes = node
-			node = next
-		}
-	}
-	buckets = (**map_node_t)(noarch.Malloc(int32(8 * uint32(nbuckets))))
-	if buckets != nil {
-		noarch.Free(unsafe.Pointer((*m).buckets))
-		(*m).buckets = buckets
-		(*m).nbuckets = uint32(nbuckets)
-	}
-	if (*m).buckets != nil {
-		noarch.Memset(unsafe.Pointer((*m).buckets), int32(0), int32(8*(*m).nbuckets))
-		node = nodes
-		for node != nil {
-			next = (*node).next
-			map_addnode(m, node)
-			node = next
-		}
-	}
-	return func() int32 {
-		if (map[bool]int32{false: 0, true: 1}[buckets == nil]) != 0 {
-			return -int32(1)
-		} else {
-			return int32(0)
-		}
-	}()
-}
-
-// map_getref - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:196
-func map_getref(m *map_base_s, key *byte) **map_node_t {
-	var hash uint32 = map_hash(key)
-	var next **map_node_t
-	if (*m).nbuckets > uint32(int32(0)) {
-		next = &*((**map_node_t)(func() unsafe.Pointer {
-			tempVar := (*m).buckets
-			return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(map_bucketidx(m, hash))*unsafe.Sizeof(*tempVar))
-		}()))
-		for *next != nil {
-			if (*(*next)).hash == hash && noarch.NotInt32(noarch.Strcmp((*byte)(unsafe.Pointer(((*map_node_t)(func() unsafe.Pointer {
-				tempVar := *next
-				return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(int32(1))*unsafe.Sizeof(*tempVar))
-			}())))), key)) != 0 {
-				return next
-			}
-			next = &(*(*next)).next
-		}
-	}
-	return nil
-}
-
-// map_deinit_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:212
-func map_deinit_(m *map_base_s) {
-	var next *map_node_t
-	var node *map_node_t
-	var i int32
-	i = int32((*m).nbuckets)
-	for func() int32 {
-		defer func() {
-			i -= 1
-		}()
-		return i
-	}() != 0 {
-		node = *((**map_node_t)(func() unsafe.Pointer {
-			tempVar := (*m).buckets
-			return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(i)*unsafe.Sizeof(*tempVar))
-		}()))
-		for node != nil {
-			next = (*node).next
-			noarch.Free(unsafe.Pointer(node))
-			node = next
-		}
-	}
-	noarch.Free(unsafe.Pointer((*m).buckets))
-}
-
-// map_get_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:228
-func map_get_(m *map_base_s, key *byte) unsafe.Pointer {
-	var next **map_node_t = map_getref(m, key)
-	return func() unsafe.Pointer {
-		if next != nil {
-			return (*(*next)).value
-		} else {
-			return (nil)
-		}
-	}()
-}
-
-// map_set_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:234
-/* Find & replace existing node */ //
-/* Add new node */ //
-//
-func map_set_(m *map_base_s, key *byte, value unsafe.Pointer, vsize int32) int32 {
-	var n int32
-	var err int32
-	var next **map_node_t
-	var node *map_node_t
-	next = map_getref(m, key)
-	if next != nil {
-		noarch.Memcpy((*(*next)).value, value, int32(uint32(vsize)))
-		return int32(0)
-	}
-	node = map_newnode(key, value, vsize)
-	if node == nil {
-		goto fail
-	}
-	if (*m).nnodes >= (*m).nbuckets {
-		n = int32(func() uint32 {
-			if (map[bool]int32{false: 0, true: 1}[(*m).nbuckets > uint32(int32(0))]) != 0 {
-				return ((*m).nbuckets << uint64(int32(1)))
-			} else {
-				return uint32(int32(1))
-			}
-		}())
-		err = map_resize(m, n)
-		if err != 0 {
-			goto fail
-		}
-	}
-	map_addnode(m, node)
-	(*m).nnodes += uint32(int32(1))
-	return int32(0)
-fail:
-	;
-	if node != nil {
-		noarch.Free(unsafe.Pointer(node))
-	}
-	return -int32(1)
-}
-
-// map_remove_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:260
-func map_remove_(m *map_base_s, key *byte) {
-	var node *map_node_t
-	var next **map_node_t = map_getref(m, key)
-	if next != nil {
-		node = *next
-		*next = (*(*next)).next
-		noarch.Free(unsafe.Pointer(node))
-		(*m).nnodes -= uint32(int32(1))
-	}
-}
-
-// map_iter_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:272
-func map_iter_() map_iter_s {
-	var iter map_iter_s
-	iter.bucketidx = uint32(int32(2147483647))*uint32(2) + uint32(1)
-	iter.node = nil
-	return iter
-}
-
-// map_next_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:280
-func map_next_(m *map_base_s, iter *map_iter_s) *byte {
-	if (*iter).node == nil || (func() *map_node_t {
-		(*iter).node = (*(*iter).node).next
-		return (*iter).node
-	}()) == nil {
-		for {
-			if func() uint32 {
-				tempVar := &(*iter).bucketidx
-				*tempVar += 1
-				return *tempVar
-			}() >= (*m).nbuckets {
-				return nil
-			}
-			(*iter).node = *((**map_node_t)(func() unsafe.Pointer {
-				tempVar := (*m).buckets
-				return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(int32((*iter).bucketidx))*unsafe.Sizeof(*tempVar))
-			}()))
-			if noarch.NotInt32((map[bool]int32{false: 0, true: 1}[(*iter).node == nil])) != 0 {
-				break
-			}
-		}
-	}
-	return (*byte)(unsafe.Pointer(((*map_node_t)(func() unsafe.Pointer {
-		tempVar := (*iter).node
-		return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)(int32(1))*unsafe.Sizeof(*tempVar))
-	}()))))
-}
-
 var quiet int8 = int8((int8(int32(0))))
 var tracing int8 = int8((int8(int32(0))))
 var allocations uint64_t = uint64_t(int32(0))
@@ -1117,7 +768,7 @@ type Object_s struct {
 	car *Object_s
 	cdr Cdr_u
 }
-type Object Object_s
+type Object = Object_s
 
 var atomic Object
 var p_atomic *Object_s = (*Object_s)(unsafe.Pointer(&atomic))
@@ -1308,29 +959,18 @@ func symbol_new(name *byte) *Symbol_s {
 	return sym
 }
 
-type Symbol_MAP struct {
-	base map_base_s
-	ref  *Symbol_s
-	tmp  *Symbol_s
-}
+type Symbol_MAP = map[*byte]*Symbol_s
 
 var map_sym Symbol_MAP
 
-// symbol_lookup - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:542
-/* Map of symbols (keys) to values. */ //
-//
+/* Map of symbols (keys) to values. */
 func symbol_lookup(name *byte) *Symbol_s {
-	var p_sym *unsafe.Pointer = (*unsafe.Pointer)(unsafe.Pointer((func() *Symbol_s {
-		(*(&map_sym)).ref = (*Symbol_s)(map_get_(&(*(&map_sym)).base, name))
-		return (*(&map_sym)).ref
-	}())))
-	return (*Symbol_s)(func() unsafe.Pointer {
-		if p_sym != nil {
-			return *p_sym
-		} else {
-			return (nil)
-		}
-	}())
+	sym, found := map_sym[name]
+	if found {
+		return sym
+	} else {
+		return (nil)
+	}
 }
 
 var symbol_strdup int8 = int8((int8(int32(1))))
@@ -1348,24 +988,14 @@ func symbol_sym(name *byte) *Symbol_s {
 			return name
 		}
 	}())
-	func() *Symbol_s {
-		(*(&map_sym)).tmp = sym
-		return (*(&map_sym)).tmp
-	}()
-	map_set_(&(*(&map_sym)).base, name, unsafe.Pointer(&(*(&map_sym)).tmp), int32(8))
+	map_sym[name] = sym
 	return sym
 }
 
 // symbol_dump - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:565
 func symbol_dump() {
-	var iter map_iter_s = map_iter_()
-	var key *byte
-	for (func() *byte {
-		tempVar := map_next_(&(*(&map_sym)).base, &iter)
-		key = tempVar
-		return tempVar
-	}()) != nil {
-		noarch.Printf((&[]byte("%s -> %p\n\x00")[0]), key, symbol_lookup(key))
+	for key, value := range map_sym {
+		noarch.Printf((&[]byte("%s -> %p\n\x00")[0]), key, value)
 	}
 }
 
@@ -2110,6 +1740,7 @@ func initialize() {
 	p_defglobal = initialize_builtin((&[]byte("defglobal\x00")[0]), f_defglobal)
 	p_dot_symbol_dump = initialize_builtin((&[]byte(".symbol_dump\x00")[0]), f_dot_symbol_dump)
 	symbol_strdup = int8((int8(int32(1))))
+	symbol_dump()
 }
 
 // main - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1271
@@ -2157,7 +1788,7 @@ func main() {
 		noarch.Fprintf(stderr, (&[]byte("Excess command-line arguments starting with: %s\n\x00")[0]), *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))))
 		os.Exit(int(int32(98)))
 	}
-	noarch.Memset(unsafe.Pointer(&map_sym), int32(0), int32(32))
+	map_sym = make(Symbol_MAP)
 	var buf *buffer_s
 	initialize()
 	buf = buffer_new(size_t(int32(1000)))
@@ -2180,6 +1811,7 @@ func debug_output(obj *Object_s) {
 }
 
 func init() {
+	
 	stdin = noarch.Stdin
 	stdout = noarch.Stdout
 	stderr = noarch.Stderr
