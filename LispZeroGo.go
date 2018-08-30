@@ -18,8 +18,10 @@
 package main
 
 import "os"
+import "fmt"
 import "github.com/elliotchance/c2go/linux"
 import "github.com/elliotchance/c2go/noarch"
+import "strings"
 import "unsafe"
 
 type error_t int32
@@ -959,19 +961,17 @@ func symbol_new(name *byte) *Symbol_s {
 	return sym
 }
 
-/* Start conversion by keying on '*byte'. This is actually wrong,
-/* because it's not the pointer that is the key, it's the (C-style,
-/* i.e. null-terminated) string pointed to. So lookups won't actually
-work; but the initial symbol_dump() call shows that the map does
-appear to be properly constructed otherwise. */
+/* Change to key on a 'string' type. This necessitated changing all
+/* callers of symbol_sym() to pass a 'string' rather than '*byte'
+/* type. That fixed some things but things still don't really work. */
 
 type Symbol_MAP =
-map[*byte]*Symbol_s
+map[string]*Symbol_s
 
 var map_sym Symbol_MAP
 
 /* Map of symbols (keys) to values. */
-func symbol_lookup(name *byte) *Symbol_s {
+func symbol_lookup(name string) *Symbol_s {
 	sym, found := map_sym[name]
 	if found {
 		return sym
@@ -983,26 +983,19 @@ func symbol_lookup(name *byte) *Symbol_s {
 var symbol_strdup int8 = int8((int8(int32(1))))
 
 // symbol_sym - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:551
-func symbol_sym(name *byte) *Symbol_s {
+func symbol_sym(name string) *Symbol_s {
 	var sym *Symbol_s = symbol_lookup(name)
 	if sym != nil {
 		return sym
 	}
-	sym = symbol_new(func() *byte {
-		if int32(int8((symbol_strdup))) != 0 {
-			return string_duplicate(name)
-		} else {
-			return name
-		}
-	}())
+	sym = new(Symbol_s)
 	map_sym[name] = sym
 	return sym
 }
 
-// symbol_dump - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:565
 func symbol_dump() {
 	for key, value := range map_sym {
-		noarch.Printf((&[]byte("%s -> %p\n\x00")[0]), key, value)
+		fmt.Printf("%s -> %p\n", key, value)
 	}
 }
 
@@ -1285,7 +1278,18 @@ func object_read(input *noarch.File, buf *buffer_s) *Object_s {
 		latest_lineno = lineno
 		noarch.Fprintf(stderr, (&[]byte("%s:%d: Seen `%s'.\n\x00")[0]), filename, lineno, token)
 	}
-	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
+	// Temporarily do this work inline. I'm stunned that Go has no
+	// easy way to do this already, for interoperability with C.
+	var tokbuf strings.Builder
+	var p unsafe.Pointer = unsafe.Pointer(token)
+	for {
+		if (*((*byte) (p))) == 0 {
+			break
+		}
+		tokbuf.WriteByte(*((*byte) (p)))
+		p = unsafe.Pointer(uintptr(unsafe.Pointer(p)) + 1)
+	}
+	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(tokbuf.String())))))
 }
 
 // list_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:781
@@ -1719,7 +1723,7 @@ func f_dot_symbol_dump(what *byte, args *Object_s, env *Object_s) *Object_s {
 }
 
 // initialize_builtin - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1232
-func initialize_builtin(sym *byte, fn compiled_fn) *Object_s {
+func initialize_builtin(sym string, fn compiled_fn) *Object_s {
 	var tmp *Object_s
 	p_environment = object_new(binding_new((object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(sym)))))), (func() *Object_s {
 		tmp = object_new_compiled(compiled_fn(fn))
@@ -1732,22 +1736,21 @@ func initialize_builtin(sym *byte, fn compiled_fn) *Object_s {
 /* TODO: Decide on a better name. */ //
 //
 func initialize() {
-	p_sym_t = symbol_sym((&[]byte("t\x00")[0]))
-	p_sym_quote = symbol_sym((&[]byte("quote\x00")[0]))
+	p_sym_t = symbol_sym("t")
+	p_sym_quote = symbol_sym("quote")
 	symbol_strdup = int8((int8(int32(0))))
-	p_quote = initialize_builtin((&[]byte("quote\x00")[0]), f_quote)
-	p_atom = initialize_builtin((&[]byte("atom\x00")[0]), f_atom)
-	p_eq = initialize_builtin((&[]byte("eq\x00")[0]), f_eq)
-	p_cons = initialize_builtin((&[]byte("cons\x00")[0]), f_cons)
-	p_car = initialize_builtin((&[]byte("car\x00")[0]), f_car)
-	p_cdr = initialize_builtin((&[]byte("cdr\x00")[0]), f_cdr)
-	p_cond = initialize_builtin((&[]byte("cond\x00")[0]), f_cond)
-	p_eval = initialize_builtin((&[]byte("eval\x00")[0]), f_eval)
-	p_apply = initialize_builtin((&[]byte("apply\x00")[0]), f_apply)
-	p_defglobal = initialize_builtin((&[]byte("defglobal\x00")[0]), f_defglobal)
-	p_dot_symbol_dump = initialize_builtin((&[]byte(".symbol_dump\x00")[0]), f_dot_symbol_dump)
+	p_quote = initialize_builtin("quote", f_quote)
+	p_atom = initialize_builtin("atom", f_atom)
+	p_eq = initialize_builtin("eq", f_eq)
+	p_cons = initialize_builtin("cons", f_cons)
+	p_car = initialize_builtin("car", f_car)
+	p_cdr = initialize_builtin("cdr", f_cdr)
+	p_cond = initialize_builtin("cond", f_cond)
+	p_eval = initialize_builtin("eval", f_eval)
+	p_apply = initialize_builtin("apply", f_apply)
+	p_defglobal = initialize_builtin("defglobal", f_defglobal)
+	p_dot_symbol_dump = initialize_builtin(".symbol_dump", f_dot_symbol_dump)
 	symbol_strdup = int8((int8(int32(1))))
-	symbol_dump()
 }
 
 // main - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1271
