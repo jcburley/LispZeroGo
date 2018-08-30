@@ -17,6 +17,8 @@
 
 package main
 
+import "bufio"
+import "io"
 import "os"
 import "fmt"
 import "github.com/elliotchance/c2go/linux"
@@ -227,8 +229,6 @@ type off64_t __off64_t
 type ssize_t __ssize_t
 type fpos_t _G_fpos_t
 type fpos64_t _G_fpos64_t
-
-var stdin *noarch.File
 
 var stdout *noarch.File
 
@@ -701,6 +701,12 @@ var tracing int8 = int8((int8(int32(0))))
 var allocations uint64_t = uint64_t(int32(0))
 var allocations_total uint64_t = uint64_t(int32(0))
 
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
+}
+
 type compiled_fn func(*byte, *Object_s, *Object_s) *Object_s
 type Symbol_s struct {
 	n string
@@ -1085,38 +1091,21 @@ func token_putback(token *byte) {
 	lookahead_valid = int32(1)
 }
 
-var my_getc_next int32
-var my_getc_file *noarch.File
-
-// my_getc - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:685
-func my_getc(input *noarch.File) int32 {
-	if int64(uintptr(unsafe.Pointer(my_getc_file))) == int64(uintptr(unsafe.Pointer(input))) {
-		my_getc_file = nil
-		return my_getc_next
+func my_getc(input *bufio.Reader) int32 {
+	b, err := input.ReadByte()
+	if err == io.EOF {
+		return -1
 	}
-	func() {
-		if (map[bool]int32{false: 0, true: 1}[my_getc_file == nil || (&[]byte("No support for un-getting on two streams at the same time\x00")[0]) == nil]) != 0 {
-		} else {
-			linux.AssertFail((&[]byte("!my_getc_file || (\"No support for un-getting on two streams at the same time\" == NULL)\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(693)), (&[]byte("void print_number(int *)\x00")[0]))
-		}
-	}()
-	return noarch.Fgetc(input)
+	check(err)
+	return (int32)(b)
 }
 
-// my_ungetc - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:698
-func my_ungetc(ch int32, input *noarch.File) {
-	func() {
-		if (map[bool]int32{false: 0, true: 1}[my_getc_file == nil || (&[]byte("No support for un-getting on two streams at the same time\x00")[0]) == nil]) != 0 {
-		} else {
-			linux.AssertFail((&[]byte("!my_getc_file || (\"No support for un-getting on two streams at the same time\" == NULL)\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(701)), (&[]byte("void print_number(int *)\x00")[0]))
-		}
-	}()
-	my_getc_file = input
-	my_getc_next = ch
+func my_ungetc(ch int32, input *bufio.Reader) {
+	input.UnreadByte()
 }
 
 // token_get - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:707
-func token_get(input *noarch.File, buf *buffer_s) (c2goDefaultReturn *byte) {
+func token_get(input *bufio.Reader, buf *buffer_s) (c2goDefaultReturn *byte) {
 	var ch int32
 	func() size_t {
 		(*(buf)).used = size_t(int32(0))
@@ -1216,7 +1205,7 @@ func cstr_to_string(token *byte) string {
 }
 
 // object_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:751
-func object_read(input *noarch.File, buf *buffer_s) *Object_s {
+func object_read(input *bufio.Reader, buf *buffer_s) *Object_s {
 	var token *byte
 	token = token_get(input, buf)
 	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte("(\x00")[0]))) != 0 {
@@ -1251,7 +1240,7 @@ func object_read(input *noarch.File, buf *buffer_s) *Object_s {
 // list_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:781
 /* Make sure we first read the object before going on to read the rest of the list. */ //
 //
-func list_read(input *noarch.File, buf *buffer_s) *Object_s {
+func list_read(input *bufio.Reader, buf *buffer_s) *Object_s {
 	var token *byte = token_get(input, buf)
 	var tmp *Object_s
 	if noarch.NotInt32(noarch.Strcmp(token, (&[]byte(")\x00")[0]))) != 0 {
@@ -1721,7 +1710,7 @@ func main() {
 		argv__array = append(argv__array, &argvSingle[0])
 	}
 	argv := *(***byte)(unsafe.Pointer(&argv__array))
-	var in *noarch.File
+	var in *bufio.Reader
 	if argc > int32(1) {
 		if noarch.NotInt32(noarch.Strcmp(*((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))), (&[]byte("-q\x00")[0]))) != 0 {
 			quiet = int8((int8(int32(1))))
@@ -1739,16 +1728,14 @@ func main() {
 	}
 	if argc == int32(2) {
 		filename = *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))
-		in = noarch.Fopen(filename, (&[]byte("r\x00")[0]))
-		if in == nil {
-			noarch.Fprintf(stderr, (&[]byte("Cannot open file %s (errno=%d)\n\x00")[0]), filename, (*noarch.Errno()))
-			os.Exit(int(int32(1)))
-		}
+		unbuf_in, err := os.Open(cstr_to_string(filename))
+		check(err)
+		in = bufio.NewReader(unbuf_in)  // Get a buffered Reader
 		argc -= 1
 		argv = ((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(1)*unsafe.Sizeof(*argv))))
 	} else {
 		filename = (&[]byte("<stdin>\x00")[0])
-		in = stdin
+		in = bufio.NewReader(os.Stdin)
 	}
 	if argc > int32(1) {
 		noarch.Fprintf(stderr, (&[]byte("Excess command-line arguments starting with: %s\n\x00")[0]), *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))))
@@ -1778,7 +1765,6 @@ func debug_output(obj *Object_s) {
 
 func init() {
 	
-	stdin = noarch.Stdin
 	stdout = noarch.Stdout
 	stderr = noarch.Stderr
 }
