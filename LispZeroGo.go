@@ -1248,6 +1248,19 @@ func token_get(input *noarch.File, buf *buffer_s) (c2goDefaultReturn *byte) {
 
 var latest_lineno uint32
 
+func cstr_to_string(token *byte) string {
+	var tokbuf strings.Builder
+	var p unsafe.Pointer = unsafe.Pointer(token)
+	for {
+		if (*((*byte) (p))) == 0 {
+			break
+		}
+		tokbuf.WriteByte(*((*byte) (p)))
+		p = unsafe.Pointer(uintptr(unsafe.Pointer(p)) + 1)
+	}
+	return tokbuf.String()
+}
+
 // object_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:751
 func object_read(input *noarch.File, buf *buffer_s) *Object_s {
 	var token *byte
@@ -1278,18 +1291,7 @@ func object_read(input *noarch.File, buf *buffer_s) *Object_s {
 		latest_lineno = lineno
 		noarch.Fprintf(stderr, (&[]byte("%s:%d: Seen `%s'.\n\x00")[0]), filename, lineno, token)
 	}
-	// Temporarily do this work inline. I'm stunned that Go has no
-	// easy way to do this already, for interoperability with C.
-	var tokbuf strings.Builder
-	var p unsafe.Pointer = unsafe.Pointer(token)
-	for {
-		if (*((*byte) (p))) == 0 {
-			break
-		}
-		tokbuf.WriteByte(*((*byte) (p)))
-		p = unsafe.Pointer(uintptr(unsafe.Pointer(p)) + 1)
-	}
-	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(tokbuf.String())))))
+	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(cstr_to_string(token))))))
 }
 
 // list_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:781
