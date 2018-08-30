@@ -864,7 +864,8 @@ func object_compiled(compiled *Object_s) compiled_fn {
 // object_new - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:480
 func object_new(car *Object_s, cdr *Object_s) *Object_s {
 	var obj *Object_s
-	obj = (*Object_s)(noarch.Malloc(int32(16)))
+	new_obj := new(Object_s)
+	obj = (*Object_s)(unsafe.Pointer(new_obj))
 	if obj == nil {
 		for {
 			var m *byte = (&[]byte("no more memory\x00")[0])
@@ -890,7 +891,8 @@ func object_new(car *Object_s, cdr *Object_s) *Object_s {
 // object_new_compiled - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:497
 func object_new_compiled(fn compiled_fn) *Object_s {
 	var obj *Object_s
-	obj = (*Object_s)(noarch.Malloc(int32(16)))
+	new_obj := new(Object_s)
+	obj = (*Object_s)(unsafe.Pointer(new_obj))
 	if obj == nil {
 		for {
 			var m *byte = (&[]byte("no more memory\x00")[0])
