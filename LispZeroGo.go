@@ -959,7 +959,14 @@ func symbol_new(name *byte) *Symbol_s {
 	return sym
 }
 
-type Symbol_MAP = map[*byte]*Symbol_s
+/* Start conversion by keying on '*byte'. This is actually wrong,
+/* because it's not the pointer that is the key, it's the (C-style,
+/* i.e. null-terminated) string pointed to. So lookups won't actually
+work; but the initial symbol_dump() call shows that the map does
+appear to be properly constructed otherwise. */
+
+type Symbol_MAP =
+map[*byte]*Symbol_s
 
 var map_sym Symbol_MAP
 
