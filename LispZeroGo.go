@@ -731,7 +731,7 @@ func string_duplicate(str *byte) *byte {
 
 type compiled_fn func(*byte, *Object_s, *Object_s) *Object_s
 type Symbol_s struct {
-	name *byte
+	n string
 }
 type Cdr_u struct{ memory unsafe.Pointer }
 
@@ -934,33 +934,6 @@ func object_new_compiled(fn compiled_fn) *Object_s {
 	return obj
 }
 
-// symbol_new - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:522
-/* Symbols. */ //
-//
-func symbol_new(name *byte) *Symbol_s {
-	var sym *Symbol_s
-	sym = (*Symbol_s)(noarch.Malloc(int32(8)))
-	if sym == nil {
-		for {
-			var m *byte = (&[]byte("no more memory\x00")[0])
-			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
-			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
-			}
-			noarch.Exit((int32(998)))
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
-	}
-	allocations += 1
-	allocations_total += uint64_t((8))
-	(*sym).name = name
-	return sym
-}
-
 /* Change to key on a 'string' type. This necessitated changing all
 /* callers of symbol_sym() to pass a 'string' rather than '*byte'
 /* type. That fixed some things but things still don't really work. */
@@ -980,6 +953,14 @@ func symbol_lookup(name string) *Symbol_s {
 	}
 }
 
+func symbol_name(s *Symbol_s) string {
+	return s.n
+}
+
+func symbol_name_as_bytes(s *Symbol_s) *byte {
+	return (*byte)(unsafe.Pointer(&s.n))
+}
+
 var symbol_strdup int8 = int8((int8(int32(1))))
 
 // symbol_sym - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:551
@@ -989,6 +970,7 @@ func symbol_sym(name string) *Symbol_s {
 		return sym
 	}
 	sym = new(Symbol_s)
+	sym.n = name
 	map_sym[name] = sym
 	return sym
 }
@@ -1024,7 +1006,7 @@ func binding_lookup(what *byte, key *Symbol_s, bindings *Object_s) *Object_s {
 		return p_nil
 	}
 	if int8((tracing)) != 0 {
-		noarch.Fprintf(stderr, (&[]byte("%s:%d: Searching for `%s' in:\n\x00")[0]), filename, lineno, (*key).name)
+		noarch.Fprintf(stderr, (&[]byte("%s:%d: Searching for `%s' in:\n\x00")[0]), filename, lineno, (*key).n)
 		max_object_write = int32(10)
 		object_write(stderr, bindings)
 		max_object_write = -int32(1)
@@ -1352,7 +1334,7 @@ func object_write(output *noarch.File, obj *Object_s) {
 		return
 	}
 	if int8((atomicp(obj))) != 0 {
-		noarch.Fprintf(output, (&[]byte("%s\x00")[0]), ((*(object_symbol(obj))).name))
+		noarch.Fprintf(output, (&[]byte("%s\x00")[0]), symbol_name(object_symbol(obj)))
 		return
 	}
 	if int8((compiledp(obj))) != 0 {
@@ -1397,7 +1379,7 @@ func binding_for(what *byte, sym *Symbol_s, env *Object_s) *Object_s {
 	var tmp *Object_s
 	tmp = binding_lookup(what, sym, env)
 	if int8((nilp(tmp))) != 0 {
-		noarch.Fprintf(stderr, (&[]byte("Unbound symbol \"%s\"\n\x00")[0]), ((*(sym)).name))
+		noarch.Fprintf(stderr, (&[]byte("Unbound symbol \"%s\"\n\x00")[0]), symbol_name(sym))
 		func() {
 			if (map[bool]int32{false: 0, true: 1}[(&[]byte("unbound symbol\x00")[0]) == nil]) != 0 {
 			} else {
@@ -1424,7 +1406,7 @@ func eval(what *byte, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_s
 		var func_ *Object_s = eval(what, list_car(exp), env)
 		var forms *Object_s = list_cdr(exp)
 		if int8((atomp(list_car(exp)))) != 0 {
-			what = (*(object_symbol(list_car(exp)))).name
+			what = symbol_name_as_bytes(object_symbol(list_car(exp)))
 		}
 		if int8((compiledp(func_))) != 0 {
 			var fn compiled_fn
@@ -1689,7 +1671,7 @@ func f_apply(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 		var func_ *Object_s = eval(what, list_car(args), env)
 		var rest *Object_s = list_cdr(args)
 		if int8((atomp(list_car(args)))) != 0 {
-			what = (*(object_symbol(list_car(args)))).name
+			what = symbol_name_as_bytes(object_symbol(list_car(args)))
 		}
 		assert_or_dump_(uint32(int32(1200)), (listp(rest)), (rest), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
 		{
