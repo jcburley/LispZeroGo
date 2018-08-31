@@ -1664,10 +1664,6 @@ func main() {
 		}
 	}
 	var in *bufio.Reader
-/*	if argc > int32(1) && int32(**((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))) == int32('-') {
-		noarch.Fprintf(stderr, (&[]byte("Unsupported option: %s\n\x00")[0]), *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))))
-		os.Exit(int(int32(99)))
-	} */
 	if len(flag.Args()) == 1 {
 		filename = flag.Arg(0)
 		unbuf_in, err := os.Open(filename)
