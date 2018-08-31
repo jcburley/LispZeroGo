@@ -21,4 +21,7 @@ zero-new-gold: zero-test.out
 clean:
 	rm -f $RESULTFILES
 
-.PHONY: all clean zero-test zero-new-gold
+install:
+	go install
+
+.PHONY: all clean zero-test zero-new-gold install
