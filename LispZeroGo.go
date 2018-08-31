@@ -1690,7 +1690,7 @@ func main() {
 }
 
 func my_exit(rc int) {
-	if prof != nil { prof.Stop(); fmt.Fprintf(os.Stderr, "Profiling stopped.\n"); }
+	if prof != nil { prof.Stop(); }
 	os.Exit(rc)
 }
 
