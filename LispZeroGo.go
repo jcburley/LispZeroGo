@@ -23,9 +23,11 @@ import "flag"
 import "fmt"
 import "github.com/elliotchance/c2go/linux"
 import "github.com/elliotchance/c2go/noarch"
+import "github.com/pkg/profile"
 import "io"
 import "os"
-import "runtime/pprof"
+// import "runtime"
+// import "runtime/pprof"
 import "strings"
 import "unsafe"
 
@@ -879,7 +881,7 @@ func object_new(car *Object_s, cdr *Object_s) *Object_s {
 			if !quiet {
 				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 			}
-			noarch.Exit((int32(998)))
+			my_exit(98)
 			if noarch.NotInt32((int32(0))) != 0 {
 				break
 			}
@@ -906,7 +908,7 @@ func object_new_compiled(fn compiled_fn) *Object_s {
 			if !quiet {
 				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 			}
-			noarch.Exit((int32(998)))
+			my_exit(99)
 			if noarch.NotInt32((int32(0))) != 0 {
 				break
 			}
@@ -1071,7 +1073,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 				if !quiet {
 					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 				}
-				noarch.Exit((int32(0)))
+				my_exit(0)
 				if noarch.NotInt32((int32(0))) != 0 {
 					break
 				}
@@ -1113,7 +1115,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 				if !quiet {
 					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 				}
-				noarch.Exit((int32(0)))
+				my_exit(0)
 				if noarch.NotInt32((int32(0))) != 0 {
 					break
 				}
@@ -1164,7 +1166,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 			if !quiet {
 				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 			}
-			noarch.Exit((int32(1)))
+			my_exit(1)
 			if noarch.NotInt32((int32(0))) != 0 {
 				break
 			}
@@ -1197,7 +1199,7 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 				if !quiet {
 					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 				}
-				noarch.Exit((int32(3)))
+				my_exit(3)
 				if noarch.NotInt32((int32(0))) != 0 {
 					break
 				}
@@ -1639,14 +1641,17 @@ func initialize() {
 }
 
 var filenameZ string  // TODO: convert all 'what' stuff to string
+var prof interface { Stop() }
 
 func main() {
 	flag.Parse()
 	if cpuprofile != "" {
-		f, err := os.Create(cpuprofile)
-		check(err)
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+		{ prof = profile.Start(profile.ProfilePath(cpuprofile)) }
+//		f, err := os.Create(cpuprofile)
+//		check(err)
+//		runtime.SetCPUProfileRate(500)
+//		pprof.StartCPUProfile(f)
+//		defer pprof.StopCPUProfile()
 	}
 	var in *bufio.Reader
 /*	if argc > int32(1) && int32(**((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))) == int32('-') {
@@ -1663,7 +1668,7 @@ func main() {
 		in = bufio.NewReader(os.Stdin)
 	} else {
 		fmt.Fprintf(os.Stderr, "Excess command-line arguments starting with: %s\n", flag.Arg(1))
-		os.Exit(int(int32(98)))
+		my_exit(97)
 	}
 
 	map_sym = make(Symbol_MAP)
@@ -1680,6 +1685,13 @@ func main() {
 			noarch.Fflush(stdout)
 		}
 	}
+
+	my_exit(0)
+}
+
+func my_exit(rc int) {
+	if prof != nil { prof.Stop(); fmt.Fprintf(os.Stderr, "Profiling stopped.\n"); }
+	os.Exit(rc)
 }
 
 // debug_output - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1328
