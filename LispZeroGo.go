@@ -26,11 +26,12 @@ import "github.com/elliotchance/c2go/noarch"
 import "github.com/pkg/profile"
 import "io"
 import "os"
-// import "runtime"
-// import "runtime/pprof"
+import "runtime"
+import "runtime/pprof"
 import "strings"
 import "unsafe"
 
+var profiler string
 var cpuprofile string
 var quiet bool
 var tracing bool
@@ -1648,12 +1649,19 @@ var prof interface { Stop() }
 func main() {
 	flag.Parse()
 	if cpuprofile != "" {
-		{ prof = profile.Start(profile.ProfilePath(cpuprofile)) }
-//		f, err := os.Create(cpuprofile)
-//		check(err)
-//		runtime.SetCPUProfileRate(500)
-//		pprof.StartCPUProfile(f)
-//		defer pprof.StopCPUProfile()
+		switch profiler {
+		case "pkg/profile":
+			prof = profile.Start(profile.ProfilePath(cpuprofile))
+		case "runtime/pprof":
+			f, err := os.Create(cpuprofile)
+			check(err)
+			runtime.SetCPUProfileRate(500)
+			pprof.StartCPUProfile(f)
+			fmt.Fprintf(os.Stderr, "Profiling started. See file `%s'.\n", cpuprofile);
+		default:
+			fmt.Fprintf(os.Stderr, "Unrecognized profiler: %s\n  Use 'pkg/profile' or 'runtime/pprof'.\n", profiler);
+			os.Exit(96)
+		}
 	}
 	var in *bufio.Reader
 /*	if argc > int32(1) && int32(**((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))) == int32('-') {
@@ -1692,7 +1700,12 @@ func main() {
 }
 
 func my_exit(rc int) {
-	if prof != nil { prof.Stop(); }
+	if prof != nil {
+		prof.Stop()
+	} else if cpuprofile != "" {
+		pprof.StopCPUProfile()
+		fmt.Fprintf(os.Stderr, "Profiling stopped. See file `%s'.\n", cpuprofile);
+	}
 	os.Exit(rc)
 }
 
@@ -1704,6 +1717,7 @@ func debug_output(obj *Object_s) {
 }
 
 func init() {
+	flag.StringVar(&profiler, "profiler", "runtime/pprof", "Specify type of profiler to use")
 	flag.StringVar(&cpuprofile, "cpuprofile", "", "write cpu profile to file")
 	flag.BoolVar(&quiet, "q", false, "quiet; do not print top-level eval results")
 	flag.BoolVar(&tracing, "t", false, "print diagnostic trace during evaluation")
