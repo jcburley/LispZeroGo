@@ -21,7 +21,7 @@ zero-new-gold: zero-test.out
 clean:
 	rm -f $RESULTFILES
 
-install:
+install: LispZeroGo
 	go install
 
 .PHONY: all clean zero-test zero-new-gold install
