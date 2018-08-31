@@ -239,6 +239,8 @@ type ssize_t __ssize_t
 type fpos_t _G_fpos_t
 type fpos64_t _G_fpos64_t
 
+var stdin *os.File
+
 var stdout *noarch.File
 
 var stderr *noarch.File
@@ -1665,7 +1667,7 @@ func main() {
 		in = bufio.NewReader(unbuf_in)  // Get a buffered Reader
 	} else if len(flag.Args()) == 0 {
 		filename = "<stdin>"
-		in = bufio.NewReader(os.Stdin)
+		in = bufio.NewReader(stdin)
 	} else {
 		fmt.Fprintf(os.Stderr, "Excess command-line arguments starting with: %s\n", flag.Arg(1))
 		my_exit(97)
@@ -1705,7 +1707,8 @@ func init() {
 	flag.StringVar(&cpuprofile, "cpuprofile", "", "write cpu profile to file")
 	flag.BoolVar(&quiet, "q", false, "quiet; do not print top-level eval results")
 	flag.BoolVar(&tracing, "t", false, "print diagnostic trace during evaluation")
-	
+
+	stdin = os.Stdin
 	stdout = noarch.Stdout
 	stderr = noarch.Stderr
 }
