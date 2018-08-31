@@ -1,1 +1,1 @@
-/home/craig/github/LispZero/zero-test.lisp
+../../../../../github/LispZero/zero-test.lisp
