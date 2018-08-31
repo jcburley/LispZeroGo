@@ -19,13 +19,19 @@ package main
 
 import "bufio"
 import "bytes"
+import "flag"
 import "fmt"
 import "github.com/elliotchance/c2go/linux"
 import "github.com/elliotchance/c2go/noarch"
 import "io"
 import "os"
+import "runtime/pprof"
 import "strings"
 import "unsafe"
+
+var cpuprofile string
+var quiet bool
+var tracing bool
 
 type error_t int32
 type int8_t int8
@@ -697,8 +703,6 @@ const _IScntrl uint16 = ((1 << 9) >> 8)
 const _ISpunct uint16 = ((1 << 10) >> 8)
 const _ISalnum uint16 = ((1 << 11) >> 8)
 
-var quiet int8 = int8((int8(int32(0))))
-var tracing int8 = int8((int8(int32(0))))
 var allocations uint64_t = uint64_t(int32(0))
 var allocations_total uint64_t = uint64_t(int32(0))
 
@@ -814,7 +818,7 @@ func finalp(list *Object_s) int8 {
 	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((listp(list)))) != 0 && int32(int8((nilp((*(*list).cdr.obj()))))) != 0])))
 }
 
-var filename *byte
+var filename string
 var lineno uint32 = uint32(int32(1))
 var max_object_write int32 = -int32(1)
 
@@ -872,7 +876,7 @@ func object_new(car *Object_s, cdr *Object_s) *Object_s {
 			if m != nil {
 				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
 			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
+			if !quiet {
 				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 			}
 			noarch.Exit((int32(998)))
@@ -899,7 +903,7 @@ func object_new_compiled(fn compiled_fn) *Object_s {
 			if m != nil {
 				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
 			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
+			if !quiet {
 				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 			}
 			noarch.Exit((int32(998)))
@@ -986,8 +990,8 @@ func binding_lookup(what *byte, key *Symbol_s, bindings *Object_s) *Object_s {
 	if int8((nilp(bindings))) != 0 {
 		return p_nil
 	}
-	if int8((tracing)) != 0 {
-		noarch.Fprintf(stderr, (&[]byte("%s:%d: Searching for `%s' in:\n\x00")[0]), filename, lineno, (*key).n)
+	if tracing {
+		fmt.Fprintf(os.Stderr, "%s:%d: Searching for `%s' in:\n", filename, lineno, (*key).n)
 		max_object_write = int32(10)
 		object_write(stderr, bindings)
 		max_object_write = -int32(1)
@@ -1064,7 +1068,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 				if m != nil {
 					noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
 				}
-				if int8((noarch.NotInt8(quiet))) != 0 {
+				if !quiet {
 					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 				}
 				noarch.Exit((int32(0)))
@@ -1106,7 +1110,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 				if m != nil {
 					noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
 				}
-				if int8((noarch.NotInt8(quiet))) != 0 {
+				if !quiet {
 					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 				}
 				noarch.Exit((int32(0)))
@@ -1157,7 +1161,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 			if m != nil {
 				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
 			}
-			if int8((noarch.NotInt8(quiet))) != 0 {
+			if !quiet {
 				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 			}
 			noarch.Exit((int32(1)))
@@ -1166,9 +1170,9 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 			}
 		}
 	}
-	if int32(int8((tracing))) != 0 && lineno != latest_lineno {
+	if tracing && lineno != latest_lineno {
 		latest_lineno = lineno
-		noarch.Fprintf(stderr, (&[]byte("%s:%d: Seen `%s'.\n\x00")[0]), filename, lineno, token)
+		fmt.Fprintf(os.Stderr, "%s:%d: Seen `%s'.\n", filename, lineno, token)
 	}
 	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
 }
@@ -1190,7 +1194,7 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 				if m != nil {
 					noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
 				}
-				if int8((noarch.NotInt8(quiet))) != 0 {
+				if !quiet {
 					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
 				}
 				noarch.Exit((int32(3)))
@@ -1634,47 +1638,31 @@ func initialize() {
 	symbol_strdup = int8((int8(int32(1))))
 }
 
-// main - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1271
+var filenameZ string  // TODO: convert all 'what' stuff to string
+
 func main() {
-	argc := int32(len(os.Args))
-	argv__multiarray := [][]byte{}
-	argv__array := []*byte{}
-	for _, argvSingle := range os.Args {
-		argv__multiarray = append(argv__multiarray, append([]byte(argvSingle), 0))
+	flag.Parse()
+	if cpuprofile != "" {
+		f, err := os.Create(cpuprofile)
+		check(err)
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
 	}
-	for _, argvSingle := range argv__multiarray {
-		argv__array = append(argv__array, &argvSingle[0])
-	}
-	argv := *(***byte)(unsafe.Pointer(&argv__array))
 	var in *bufio.Reader
-	if argc > int32(1) {
-		if noarch.NotInt32(noarch.Strcmp(*((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))), (&[]byte("-q\x00")[0]))) != 0 {
-			quiet = int8((int8(int32(1))))
-			argc -= 1
-			argv = ((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(1)*unsafe.Sizeof(*argv))))
-		} else if noarch.NotInt32(noarch.Strcmp(*((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))), (&[]byte("-t\x00")[0]))) != 0 {
-			tracing = int8((int8(int32(1))))
-			argc -= 1
-			argv = ((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(1)*unsafe.Sizeof(*argv))))
-		}
-	}
-	if argc > int32(1) && int32(**((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))) == int32('-') {
+/*	if argc > int32(1) && int32(**((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))) == int32('-') {
 		noarch.Fprintf(stderr, (&[]byte("Unsupported option: %s\n\x00")[0]), *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))))
 		os.Exit(int(int32(99)))
-	}
-	if argc == int32(2) {
-		filename = *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv))))
-		unbuf_in, err := os.Open(cstr_to_string(filename))
+	} */
+	if len(flag.Args()) == 1 {
+		filename = flag.Arg(0)
+		unbuf_in, err := os.Open(filename)
 		check(err)
 		in = bufio.NewReader(unbuf_in)  // Get a buffered Reader
-		argc -= 1
-		argv = ((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(1)*unsafe.Sizeof(*argv))))
-	} else {
-		filename = (&[]byte("<stdin>\x00")[0])
+	} else if len(flag.Args()) == 0 {
+		filename = "<stdin>"
 		in = bufio.NewReader(os.Stdin)
-	}
-	if argc > int32(1) {
-		noarch.Fprintf(stderr, (&[]byte("Excess command-line arguments starting with: %s\n\x00")[0]), *((**byte)(unsafe.Pointer(uintptr(unsafe.Pointer(argv)) + (uintptr)(int32(1))*unsafe.Sizeof(*argv)))))
+	} else {
+		fmt.Fprintf(os.Stderr, "Excess command-line arguments starting with: %s\n", flag.Arg(1))
 		os.Exit(int(int32(98)))
 	}
 
@@ -1685,13 +1673,13 @@ func main() {
 
 	for {
 		var obj *Object_s = object_read(in, buf)
-		if int8((noarch.NotInt8(quiet))) != 0 {
-			object_write(stdout, eval(filename, obj, p_environment))
+		if !quiet {
+			filenameZ = filename + "\x00"
+			object_write(stdout, eval((*byte)(unsafe.Pointer(&filenameZ)), obj, p_environment))
 			noarch.Fprintf(stdout, (&[]byte("\n\x00")[0]))
 			noarch.Fflush(stdout)
 		}
 	}
-	return
 }
 
 // debug_output - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1328
@@ -1702,6 +1690,9 @@ func debug_output(obj *Object_s) {
 }
 
 func init() {
+	flag.StringVar(&cpuprofile, "cpuprofile", "", "write cpu profile to file")
+	flag.BoolVar(&quiet, "q", false, "quiet; do not print top-level eval results")
+	flag.BoolVar(&tracing, "t", false, "print diagnostic trace during evaluation")
 	
 	stdout = noarch.Stdout
 	stderr = noarch.Stderr
