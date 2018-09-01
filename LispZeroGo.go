@@ -241,10 +241,8 @@ type fpos_t _G_fpos_t
 type fpos64_t _G_fpos64_t
 
 var stdin *os.File
-
-var stdout *noarch.File
-
-var stderr *noarch.File
+var stdout *bufio.Writer
+var stderr *bufio.Writer
 
 type obstack struct {
 }
@@ -834,10 +832,10 @@ func assert_or_dump_(srcline uint32, ok int8, obj *Object_s, what *byte) {
 	if int32(int8((ok))) != 0 || max_object_write != -int32(1) {
 		return
 	}
-	noarch.Fprintf(stderr, (&[]byte("ERROR at %d: %s, but got:\n\x00")[0]), lineno, what)
+	fmt.Fprintf(stderr, "ERROR at %d: %s, but got:\n", lineno, what)
 	max_object_write = int32(10)
 	object_write(stderr, obj)
-	noarch.Fprintf(stderr, (&[]byte("\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n\x00")[0]), srcline)
+	fmt.Fprintf(stderr, "\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n", srcline)
 	func() {
 		if (map[bool]int32{false: 0, true: 1}[what == nil]) != 0 {
 		} else {
@@ -879,10 +877,10 @@ func object_new(car *Object_s, cdr *Object_s) *Object_s {
 		for {
 			var m *byte = (&[]byte("no more memory\x00")[0])
 			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
+				fmt.Fprintf(stderr, "%s\n", m)
 			}
 			if !quiet {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
+				fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
 			}
 			my_exit(98)
 			if noarch.NotInt32((int32(0))) != 0 {
@@ -906,10 +904,10 @@ func object_new_compiled(fn compiled_fn) *Object_s {
 		for {
 			var m *byte = (&[]byte("no more memory\x00")[0])
 			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
+				fmt.Fprintf(stderr, "%s\n", m)
 			}
 			if !quiet {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
+				fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
 			}
 			my_exit(99)
 			if noarch.NotInt32((int32(0))) != 0 {
@@ -1000,7 +998,7 @@ func binding_lookup(what *byte, key *Symbol_s, bindings *Object_s) *Object_s {
 		max_object_write = int32(10)
 		object_write(stderr, bindings)
 		max_object_write = -int32(1)
-		noarch.Fputs((&[]byte("\n\n\x00")[0]), stderr)
+		io.WriteString(stderr,"\n\n")
 	}
 	for ; int8((noarch.NotInt8(nilp(bindings)))) != 0; bindings = list_cdr(bindings) {
 		assert_or_dump_(uint32(int32(616)), (listp(bindings)), (bindings), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
@@ -1071,10 +1069,10 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 			for {
 				var m *byte = nil
 				if m != nil {
-					noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
+					fmt.Fprintf(stderr, "%s\n", m)
 				}
 				if !quiet {
-					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
+					fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations),  uint64_t(allocations_total))
 				}
 				my_exit(0)
 				if noarch.NotInt32((int32(0))) != 0 {
@@ -1113,10 +1111,10 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 			for {
 				var m *byte = nil
 				if m != nil {
-					noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
+					fmt.Fprintf(stderr, "%s\n", m)
 				}
 				if !quiet {
-					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
+					fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations),  uint64_t(allocations_total))
 				}
 				my_exit(0)
 				if noarch.NotInt32((int32(0))) != 0 {
@@ -1164,10 +1162,10 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 		for {
 			var m *byte = (&[]byte("unbalanced close paren\x00")[0])
 			if m != nil {
-				noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
+				fmt.Fprintf(stderr, "%s\n", m)
 			}
 			if !quiet {
-				noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
+				fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
 			}
 			my_exit(1)
 			if noarch.NotInt32((int32(0))) != 0 {
@@ -1197,10 +1195,10 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 			for {
 				var m *byte = (&[]byte("missing close parenthese for simple list\x00")[0])
 				if m != nil {
-					noarch.Fprintf(stderr, (&[]byte("%s\n\x00")[0]), m)
+					fmt.Fprintf(stderr, "%s\n", m)
 				}
 				if !quiet {
-					noarch.Fprintf(stderr, (&[]byte("allocations: %d; total: %d\n\x00")[0]), uint64_t(allocations), uint64_t(allocations_total))
+					fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
 				}
 				my_exit(3)
 				if noarch.NotInt32((int32(0))) != 0 {
@@ -1231,49 +1229,47 @@ func quotep(obj *Object_s) (c2goDefaultReturn int8) {
 	return
 }
 
-// object_write - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:818
-/* TODO: Print name of function. */ //
-//
-func object_write(output *noarch.File, obj *Object_s) {
+/* TODO: Print name of function. */
+func object_write(output *bufio.Writer, obj *Object_s) {
 	if int8((nilp(obj))) != 0 {
-		noarch.Fprintf(output, (&[]byte("()\x00")[0]))
+		fmt.Fprintf(output, "()")
 		return
 	}
 	if int8((atomicp(obj))) != 0 {
-		noarch.Fprintf(output, (&[]byte("%s\x00")[0]), symbol_name(object_symbol(obj)))
+		fmt.Fprintf(output, "%s", symbol_name(object_symbol(obj)))
 		return
 	}
 	if int8((compiledp(obj))) != 0 {
-		noarch.Fprintf(output, (&[]byte("*COMPILED*\x00")[0]))
+		fmt.Fprintf(output, "*COMPILED*")
 		return
 	}
 	if int8((quotep(obj))) != 0 {
-		noarch.Fprintf(output, (&[]byte("'\x00")[0]))
+		fmt.Fprintf(output, "'")
 		object_write(output, list_car(list_cdr(obj)))
 		return
 	}
 	if max_object_write == int32(0) {
-		noarch.Fprintf(output, (&[]byte("(...)\x00")[0]))
+		fmt.Fprintf(output, "(...)")
 		return
 	}
 	if max_object_write > int32(0) {
 		max_object_write -= 1
 	}
-	noarch.Fprintf(output, (&[]byte("(\x00")[0]))
+	fmt.Fprintf(output, "(")
 	for {
 		object_write(output, list_car(obj))
 		if int8((finalp(obj))) != 0 {
-			noarch.Fprintf(output, (&[]byte(")\x00")[0]))
+			fmt.Fprintf(output, ")")
 			return
 		}
 		obj = list_cdr(obj)
 		if int8((noarch.NotInt8(listp(obj)))) != 0 {
-			noarch.Fprintf(output, (&[]byte(" . \x00")[0]))
+			fmt.Fprintf(output, " . ")
 			object_write(output, obj)
-			noarch.Fprintf(output, (&[]byte(")\x00")[0]))
+			fmt.Fprintf(output, ")")
 			return
 		}
-		noarch.Fprintf(output, (&[]byte(" \x00")[0]))
+		fmt.Fprintf(output, " ")
 	}
 }
 
@@ -1285,7 +1281,7 @@ func binding_for(what *byte, sym *Symbol_s, env *Object_s) *Object_s {
 	var tmp *Object_s
 	tmp = binding_lookup(what, sym, env)
 	if int8((nilp(tmp))) != 0 {
-		noarch.Fprintf(stderr, (&[]byte("Unbound symbol \"%s\"\n\x00")[0]), symbol_name(sym))
+		fmt.Fprintf(stderr, "Unbound symbol \"%s\"\n", symbol_name(sym))
 		func() {
 			if (map[bool]int32{false: 0, true: 1}[(&[]byte("unbound symbol\x00")[0]) == nil]) != 0 {
 			} else {
@@ -1692,8 +1688,8 @@ func main() {
 		if !quiet {
 			filenameZ = filename + "\x00"
 			object_write(stdout, eval((*byte)(unsafe.Pointer(&filenameZ)), obj, p_environment))
-			noarch.Fprintf(stdout, (&[]byte("\n\x00")[0]))
-			noarch.Fflush(stdout)
+			fmt.Fprintf(stdout, "\n")
+			stdout.Flush()
 		}
 	}
 
@@ -1713,8 +1709,8 @@ func my_exit(rc int) {
 // debug_output - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1328
 func debug_output(obj *Object_s) {
 	object_write(stdout, obj)
-	noarch.Fprintf(stdout, (&[]byte("\n\x00")[0]))
-	noarch.Fflush(stdout)
+	fmt.Fprintf(stdout, "\n")
+	stdout.Flush()
 }
 
 func init() {
@@ -1725,6 +1721,6 @@ func init() {
 	flag.BoolVar(&tracing, "t", false, "print diagnostic trace during evaluation")
 
 	stdin = os.Stdin
-	stdout = noarch.Stdout
-	stderr = noarch.Stderr
+	stdout = bufio.NewWriter(os.Stdout)
+	stderr = bufio.NewWriter(os.Stderr)
 }
