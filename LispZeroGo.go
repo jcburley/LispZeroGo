@@ -1645,6 +1645,7 @@ func initialize() {
 
 var filenameZ string  // TODO: convert all 'what' stuff to string
 var prof interface { Stop() }
+var inBufSize int = 4096  // Default on my MacBook Pro 2018-08-31
 
 func main() {
 	flag.Parse()
@@ -1668,15 +1669,19 @@ func main() {
 		filename = flag.Arg(0)
 		unbuf_in, err := os.Open(filename)
 		check(err)
-		in = bufio.NewReader(unbuf_in)  // Get a buffered Reader
+		in = bufio.NewReaderSize(unbuf_in, inBufSize)  // Get a buffered Reader
 	} else if len(flag.Args()) == 0 {
 		filename = "<stdin>"
-		in = bufio.NewReader(stdin)
+		in = bufio.NewReaderSize(stdin, inBufSize)
 	} else {
 		fmt.Fprintf(os.Stderr, "Excess command-line arguments starting with: %s\n", flag.Arg(1))
 		my_exit(97)
 	}
 
+	if !quiet {
+		fmt.Fprintf(os.Stderr, "Underlying input buffer size: %d\n", in.Size())
+	}
+	
 	map_sym = make(Symbol_MAP)
 	var buf *bytes.Buffer = new(bytes.Buffer)
 
@@ -1715,6 +1720,7 @@ func debug_output(obj *Object_s) {
 func init() {
 	flag.StringVar(&profiler, "profiler", "runtime/pprof", "Specify type of profiler to use")
 	flag.StringVar(&cpuprofile, "cpuprofile", "", "write cpu profile to file")
+	flag.IntVar(&inBufSize, "inbufsize", 4096, "Input buffer size to use")
 	flag.BoolVar(&quiet, "q", false, "quiet; do not print top-level eval results")
 	flag.BoolVar(&tracing, "t", false, "print diagnostic trace during evaluation")
 
