@@ -1,20 +1,3 @@
-/*
-	Package main - transpiled by c2go version: v0.25.2 Dubnium 2018-06-29
-
-	If you have found any issues, please raise an issue at:
-	https://github.com/elliotchance/c2go/
-*/
-
-// Warning (RecordDecl):  /usr/include/libio.h:144 : could not lookup type definition for : _IO_FILE
-// Warning (FieldDecl):  /usr/include/x86_64-linux-gnu/bits/waitstatus.h:75 : Error : name of FieldDecl is empty
-// Warning (FieldDecl):  /usr/include/x86_64-linux-gnu/bits/waitstatus.h:89 : Error : name of FieldDecl is empty
-// Warning (TransparentUnionAttr):  /usr/include/stdlib.h:71 : could not parse &{48222208 {/usr/include/stdlib.h 71 0 35 0 } []}
-// Warning (FieldDecl):  /usr/include/stdlib.h:69 : Avoid struct `union wait *` in FieldDecl
-// Warning (RecordDecl):  /usr/include/stdlib.h:67 : could not determine the size of type `union __WAIT_STATUS` for that reason: Cannot determine sizeof : |union __WAIT_STATUS|. err = Cannot determine sizeof : |union wait *|. err = error in union
-// Error (RecordDecl):  /usr/include/stdlib.h:67 : Cannot determine sizeof : |union __WAIT_STATUS|. err = Cannot determine sizeof : |union wait *|. err = error in union
-// Warning (EnumDecl):  /usr/include/ctype.h:46 : Add support of continues counter for type : *ast.ParenExpr
-// Warning: using unsafe slice cast to convert from []byte to []byte
-
 package main
 
 import "bufio"
