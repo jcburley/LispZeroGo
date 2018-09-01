@@ -2,6 +2,12 @@ Performance Analysis of LispZeroGo versus LispZero
 
 Using: https://blog.golang.org/profiling-go-programs
 
+Generating test cases via e.g.:
+
+    $ lumo -e '(load-file "gen-big-list.clj") (gen-big-list 10000000)' > 10M.out
+    
+    $ lumo -e '(load-file "gen-big-list.clj") (println "(cond nil (quote (") (gen-big-list 1000000) (println ")))")' > D-1M.out
+
 2018-08-31 jcburley: Hand-modified version of c2go-generated variant
 of lisp-zero-single.c, with all Malloc() calls removed/replaced (with
 new()/make()), among other "nativizations" performed to the code. (It
@@ -41,3 +47,6 @@ Takes about half the memory, and a little less wall-clock time, but
 about twice the CPU time for the large (10M-cons) input! Must be
 making use of more than one thread, though my (original) code doesn't
 explicitly do anything to cause that -- maybe an underlying-I/O thing?
+
+Added a -inbufsize option, tried 4MB, but no real differences
+observed.
