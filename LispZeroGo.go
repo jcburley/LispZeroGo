@@ -31,683 +31,27 @@ import "runtime/pprof"
 import "strings"
 import "unsafe"
 
-var profiler string
-var cpuprofile string
-var quiet bool
-var tracing bool
-
-type error_t int32
-type int8_t int8
-type int16_t int16
-type int32_t int32
-type int64_t int32
-type uint8_t uint8
-type uint16_t uint16
-type uint32_t uint32
-type uint64_t uint32
-type int_least8_t int8
-type int_least16_t int16
-type int_least32_t int32
-type int_least64_t int32
-type uint_least8_t uint8
-type uint_least16_t uint16
-type uint_least32_t uint32
-type uint_least64_t uint32
-type int_fast8_t int8
-type int_fast16_t int32
-type int_fast32_t int32
-type int_fast64_t int32
-type uint_fast8_t uint8
-type uint_fast16_t uint32
-type uint_fast32_t uint32
-type uint_fast64_t uint32
-type intptr_t int32
-type uintptr_t uint32
-type intmax_t int32
-type uintmax_t uint32
-type __gwchar_t int32
-type imaxdiv_t struct {
-	quot int32
-	rem  int32
-}
-type size_t uint32
-type __u_char uint8
-type __u_short uint16
-type __u_int uint32
-type __u_long uint32
-type __int8_t int8
-type __uint8_t uint8
-type __int16_t int16
-type __uint16_t uint16
-type __int32_t int32
-type __uint32_t uint32
-type __int64_t int32
-type __uint64_t uint32
-type __quad_t int32
-type __u_quad_t uint32
-type __dev_t uint32
-type __uid_t uint32
-type __gid_t uint32
-type __ino_t uint32
-type __ino64_t uint32
-type __mode_t uint32
-type __nlink_t uint32
-type __off_t int32
-type __off64_t int32
-type __pid_t int32
-type __fsid_t struct {
-	__val [2]int32
-}
-type __clock_t int32
-type __rlim_t uint32
-type __rlim64_t uint32
-type __id_t uint32
-type __time_t int32
-type __useconds_t uint32
-type __suseconds_t int32
-type __daddr_t int32
-type __key_t int32
-type __clockid_t int32
-type __timer_t unsafe.Pointer
-type __blksize_t int32
-type __blkcnt_t int32
-type __blkcnt64_t int32
-type __fsblkcnt_t uint32
-type __fsblkcnt64_t uint32
-type __fsfilcnt_t uint32
-type __fsfilcnt64_t uint32
-type __fsword_t int32
-type __ssize_t int32
-type __syscall_slong_t int32
-type __syscall_ulong_t uint32
-type __loff_t __off64_t
-type __qaddr_t *__quad_t
-type __caddr_t *byte
-type __intptr_t int32
-type __socklen_t uint32
-type FILE _IO_FILE
-type __FILE _IO_FILE
-type BSunionSatSSusrSincludeSwcharPhD85D3E struct{ memory unsafe.Pointer }
-
-func (unionVar *BSunionSatSSusrSincludeSwcharPhD85D3E) copy() BSunionSatSSusrSincludeSwcharPhD85D3E {
-	var buffer [8]byte
-	for i := range buffer {
-		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-	}
-	var newUnion BSunionSatSSusrSincludeSwcharPhD85D3E
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *BSunionSatSSusrSincludeSwcharPhD85D3E) __wch() *uint32 {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*uint32)(unionVar.memory)
-}
-func (unionVar *BSunionSatSSusrSincludeSwcharPhD85D3E) __wchb() *[4]byte {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[4]byte)(unionVar.memory)
-}
-
-type __mbstate_t struct {
-	__count int32
-	__value BSunionSatSSusrSincludeSwcharPhD85D3E
-}
-type _G_fpos_t struct {
-	__pos   __off_t
-	__state int64
-}
-type _G_fpos64_t struct {
-	__pos   __off64_t
-	__state int64
-}
-type va_list int64
-type __gnuc_va_list int64
-type _IO_jump_t struct {
-}
-type _IO_lock_t interface{}
-type _IO_marker struct {
-	_next *_IO_marker
-	_sbuf *_IO_FILE
-	_pos  int32
-}
-type __codecvt_result int32
-
-const ( // Warning (RecordDecl):  /usr/include/libio.h:144 : could not lookup type definition for : _IO_FILE
-	__codecvt_ok      __codecvt_result = 0
-	__codecvt_partial                  = 1
-	__codecvt_error                    = 2
-	__codecvt_noconv                   = 3
-)
-
-type _IO_FILE struct {
-	_flags          int32
-	_IO_read_ptr    *byte
-	_IO_read_end    *byte
-	_IO_read_base   *byte
-	_IO_write_base  *byte
-	_IO_write_ptr   *byte
-	_IO_write_end   *byte
-	_IO_buf_base    *byte
-	_IO_buf_end     *byte
-	_IO_save_base   *byte
-	_IO_backup_base *byte
-	_IO_save_end    *byte
-	_markers        *_IO_marker
-	_chain          *_IO_FILE
-	_fileno         int32
-	_flags2         int32
-	_old_offset     __off_t
-	_cur_column     uint16
-	_vtable_offset  int8
-	_shortbuf       [1]byte
-	_lock           *_IO_lock_t
-	_offset         __off64_t
-	__pad1          unsafe.Pointer
-	__pad2          unsafe.Pointer
-	__pad3          unsafe.Pointer
-	__pad4          unsafe.Pointer
-	__pad5          size_t
-	_mode           int32
-	_unused2        [20]byte
-}
-type _IO_FILE_plus struct {
-}
-type __io_read_fn func(unsafe.Pointer, *byte, size_t) __ssize_t
-type __io_write_fn func(unsafe.Pointer, *byte, size_t) __ssize_t
-type __io_seek_fn func(unsafe.Pointer, *__off64_t, int32) int32
-type __io_close_fn func(unsafe.Pointer) int32
-type cookie_read_function_t __io_read_fn
-type cookie_write_function_t __io_write_fn
-type cookie_seek_function_t __io_seek_fn
-type cookie_close_function_t __io_close_fn
-type _IO_cookie_io_functions_t struct {
-	read  __io_read_fn
-	write __io_write_fn
-	seek  __io_seek_fn
-	close __io_close_fn
-}
-type cookie_io_functions_t _IO_cookie_io_functions_t
-type _IO_cookie_file struct {
-}
-type off_t __off_t
-type off64_t __off64_t
-type ssize_t __ssize_t
-type fpos_t _G_fpos_t
-type fpos64_t _G_fpos64_t
+const _ISspace uint16 = ((1 << 5) << 8)
 
 var stdin *os.File
 var stdout *bufio.Writer
 var stderr *bufio.Writer
 
-type obstack struct {
-}
-type wchar_t int32
-
-const P_ALL int32 = 0
-const P_PID int32 = 1
-const P_PGID int32 = 2
-
-type idtype_t int32
-type BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSwaitstatusPhD69D5E struct {
-	__w_termsig  uint32
-	__w_coredump uint32
-	__w_retcode  uint32
-}
-type BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSwaitstatusPhD84D5E struct {
-	__w_stopval uint32
-	__w_stopsig uint32
-}
-type wait struct{ memory unsafe.Pointer }
-
-func (unionVar *wait) copy() wait {
-	var buffer [16]byte
-	for i := range buffer {
-		buffer[i] = (*((*[16]byte)(unionVar.memory)))[i]
+func my_assert(t *byte, w *byte, l uint32, x *byte) {
+	if *t == 0 {
+		return
 	}
-	var newUnion wait
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *wait) w_status() *int32 {
-	if unionVar.memory == nil {
-		var buffer [16]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-func (unionVar *wait) __wait_terminated() *BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSwaitstatusPhD69D5E {
-	if unionVar.memory == nil {
-		var buffer [16]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSwaitstatusPhD69D5E)(unionVar.memory)
-}
-func (unionVar *wait) __wait_stopped() *BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSwaitstatusPhD84D5E {
-	if unionVar.memory == nil {
-		var buffer [16]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSwaitstatusPhD84D5E)(unionVar.memory)
+	stdout.Flush()
+	stderr.Flush()
+	linux.AssertFail(t, w, l, x)
 }
 
-type div_t struct {
-	quot int32
-	rem  int32
-}
-type ldiv_t struct {
-	quot int32
-	rem  int32
-}
-type lldiv_t struct {
-	quot int64
-	rem  int64
-}
-type __locale_t int32
-type locale_t __locale_t
-type u_char __u_char
-type u_short __u_short
-type u_int __u_int
-type u_long __u_long
-type quad_t __quad_t
-type u_quad_t __u_quad_t
-type fsid_t __fsid_t
-type loff_t __loff_t
-type ino_t __ino_t
-type ino64_t __ino64_t
-type dev_t __dev_t
-type gid_t __gid_t
-type mode_t __mode_t
-type nlink_t __nlink_t
-type uid_t __uid_t
-type pid_t __pid_t
-type id_t __id_t
-type daddr_t __daddr_t
-type caddr_t __caddr_t
-type key_t __key_t
-type clock_t __clock_t
-type time_t __time_t
-type clockid_t __clockid_t
-type timer_t __timer_t
-type useconds_t __useconds_t
-type suseconds_t __suseconds_t
-type ulong uint32
-type ushort uint16
-type uint uint32
-type u_int8_t uint8
-type u_int16_t uint16
-type u_int32_t uint32
-type u_int64_t uint32
-type register_t int32
-type __sig_atomic_t int32
-type __sigset_t struct {
-	__val [16]uint32
-}
-type sigset_t __sigset_t
-type timespec struct {
-	tv_sec  __time_t
-	tv_nsec __syscall_slong_t
-}
-type timeval struct {
-	tv_sec  __time_t
-	tv_usec __suseconds_t
-}
-type __fd_mask int32
-type fd_set struct {
-	fds_bits [16]__fd_mask
-}
-type fd_mask __fd_mask
-type blksize_t __blksize_t
-type blkcnt_t __blkcnt_t
-type fsblkcnt_t __fsblkcnt_t
-type fsfilcnt_t __fsfilcnt_t
-type blkcnt64_t __blkcnt64_t
-type fsblkcnt64_t __fsblkcnt64_t
-type fsfilcnt64_t __fsfilcnt64_t
-type pthread_t uint32
-type pthread_attr_t struct{ memory unsafe.Pointer }
+var profiler string
+var cpuprofile string
+var quiet bool
+var tracing bool
 
-func (unionVar *pthread_attr_t) copy() pthread_attr_t {
-	var buffer [56]byte
-	for i := range buffer {
-		buffer[i] = (*((*[56]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_attr_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_attr_t) __size() *[56]byte {
-	if unionVar.memory == nil {
-		var buffer [56]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[56]byte)(unionVar.memory)
-}
-func (unionVar *pthread_attr_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [56]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type __pthread_internal_list struct {
-	__prev *__pthread_internal_list
-	__next *__pthread_internal_list
-}
-type __pthread_list_t __pthread_internal_list
-type __pthread_mutex_s struct {
-	__lock    int32
-	__count   uint32
-	__owner   int32
-	__nusers  uint32
-	__kind    int32
-	__spins   int16
-	__elision int16
-	__list    __pthread_list_t
-}
-type pthread_mutex_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_mutex_t) copy() pthread_mutex_t {
-	var buffer [40]byte
-	for i := range buffer {
-		buffer[i] = (*((*[40]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_mutex_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_mutex_t) __data() *__pthread_mutex_s {
-	if unionVar.memory == nil {
-		var buffer [40]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*__pthread_mutex_s)(unionVar.memory)
-}
-func (unionVar *pthread_mutex_t) __size() *[40]byte {
-	if unionVar.memory == nil {
-		var buffer [40]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[40]byte)(unionVar.memory)
-}
-func (unionVar *pthread_mutex_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [40]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type pthread_mutexattr_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_mutexattr_t) copy() pthread_mutexattr_t {
-	var buffer [8]byte
-	for i := range buffer {
-		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_mutexattr_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_mutexattr_t) __size() *[4]byte {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[4]byte)(unionVar.memory)
-}
-func (unionVar *pthread_mutexattr_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSpthreadtypesPhD141D3E struct {
-	__lock          int32
-	__futex         uint32
-	__total_seq     uint64
-	__wakeup_seq    uint64
-	__woken_seq     uint64
-	__mutex         unsafe.Pointer
-	__nwaiters      uint32
-	__broadcast_seq uint32
-}
-type pthread_cond_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_cond_t) copy() pthread_cond_t {
-	var buffer [72]byte
-	for i := range buffer {
-		buffer[i] = (*((*[72]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_cond_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_cond_t) __data() *BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSpthreadtypesPhD141D3E {
-	if unionVar.memory == nil {
-		var buffer [72]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSpthreadtypesPhD141D3E)(unionVar.memory)
-}
-func (unionVar *pthread_cond_t) __size() *[48]byte {
-	if unionVar.memory == nil {
-		var buffer [72]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[48]byte)(unionVar.memory)
-}
-func (unionVar *pthread_cond_t) __align() *int64 {
-	if unionVar.memory == nil {
-		var buffer [72]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int64)(unionVar.memory)
-}
-
-type pthread_condattr_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_condattr_t) copy() pthread_condattr_t {
-	var buffer [8]byte
-	for i := range buffer {
-		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_condattr_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_condattr_t) __size() *[4]byte {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[4]byte)(unionVar.memory)
-}
-func (unionVar *pthread_condattr_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type pthread_key_t uint32
-type pthread_once_t int32
-type BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSpthreadtypesPhD177D3E struct {
-	__lock              int32
-	__nr_readers        uint32
-	__readers_wakeup    uint32
-	__writer_wakeup     uint32
-	__nr_readers_queued uint32
-	__nr_writers_queued uint32
-	__writer            int32
-	__shared            int32
-	__rwelision         int8
-	__pad1              [7]uint8
-	__pad2              uint32
-	__flags             uint32
-}
-type pthread_rwlock_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_rwlock_t) copy() pthread_rwlock_t {
-	var buffer [56]byte
-	for i := range buffer {
-		buffer[i] = (*((*[56]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_rwlock_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_rwlock_t) __data() *BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSpthreadtypesPhD177D3E {
-	if unionVar.memory == nil {
-		var buffer [56]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*BSstructSatSSusrSincludeSx86_64TlinuxTgnuSbitsSpthreadtypesPhD177D3E)(unionVar.memory)
-}
-func (unionVar *pthread_rwlock_t) __size() *[56]byte {
-	if unionVar.memory == nil {
-		var buffer [56]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[56]byte)(unionVar.memory)
-}
-func (unionVar *pthread_rwlock_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [56]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type pthread_rwlockattr_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_rwlockattr_t) copy() pthread_rwlockattr_t {
-	var buffer [8]byte
-	for i := range buffer {
-		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_rwlockattr_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_rwlockattr_t) __size() *[8]byte {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[8]byte)(unionVar.memory)
-}
-func (unionVar *pthread_rwlockattr_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type pthread_spinlock_t int32
-type pthread_barrier_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_barrier_t) copy() pthread_barrier_t {
-	var buffer [32]byte
-	for i := range buffer {
-		buffer[i] = (*((*[32]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_barrier_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_barrier_t) __size() *[32]byte {
-	if unionVar.memory == nil {
-		var buffer [32]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[32]byte)(unionVar.memory)
-}
-func (unionVar *pthread_barrier_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [32]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type pthread_barrierattr_t struct{ memory unsafe.Pointer }
-
-func (unionVar *pthread_barrierattr_t) copy() pthread_barrierattr_t {
-	var buffer [8]byte
-	for i := range buffer {
-		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-	}
-	var newUnion pthread_barrierattr_t
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
-}
-func (unionVar *pthread_barrierattr_t) __size() *[4]byte {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*[4]byte)(unionVar.memory)
-}
-func (unionVar *pthread_barrierattr_t) __align() *int32 {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*int32)(unionVar.memory)
-}
-
-type random_data struct {
-	fptr      *int32_t
-	rptr      *int32_t
-	state     *int32_t
-	rand_type int32
-	rand_deg  int32
-	rand_sep  int32
-	end_ptr   *int32_t
-}
-type drand48_data struct {
-	__x     [3]uint16
-	__old_x [3]uint16
-	__c     uint16
-	__init  uint16
-	__a     uint64
-}
-type __compar_fn_t func(unsafe.Pointer, unsafe.Pointer) int32
-type comparison_fn_t __compar_fn_t
-type __compar_d_fn_t func(unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) int32
-
-const // Warning (FieldDecl):  /usr/include/x86_64-linux-gnu/bits/waitstatus.h:75 : Error : name of FieldDecl is empty
-// Warning (FieldDecl):  /usr/include/x86_64-linux-gnu/bits/waitstatus.h:89 : Error : name of FieldDecl is empty
-// Warning (TransparentUnionAttr):  /usr/include/stdlib.h:71 : could not parse &{48222208 {/usr/include/stdlib.h 71 0 35 0 } []}
-// Warning (FieldDecl):  /usr/include/stdlib.h:69 : Avoid struct `union wait *` in FieldDecl
-// Warning (RecordDecl):  /usr/include/stdlib.h:67 : could not determine the size of type `union __WAIT_STATUS` for that reason: Cannot determine sizeof : |union __WAIT_STATUS|. err = Cannot determine sizeof : |union wait *|. err = error in union
-// Error (RecordDecl):  /usr/include/stdlib.h:67 : Cannot determine sizeof : |union __WAIT_STATUS|. err = Cannot determine sizeof : |union wait *|. err = error in union
-_ISupper uint16 = ((1 << 0) << 8)
-const // Warning (EnumDecl):  /usr/include/ctype.h:46 : Add support of continues counter for type : *ast.ParenExpr
-_ISlower uint16 = ((1 << 1) << 8)
-const _ISalpha uint16 = ((1 << 2) << 8)
-const _ISdigit uint16 = ((1 << 3) << 8)
-const _ISxdigit uint16 = ((1 << 4) << 8)
-const _ISspace uint16 = ((1 << 5) << 8)
-const _ISprint uint16 = ((1 << 6) << 8)
-const _ISgraph uint16 = ((1 << 7) << 8)
-const _ISblank uint16 = ((1 << 8) >> 8)
-const _IScntrl uint16 = ((1 << 9) >> 8)
-const _ISpunct uint16 = ((1 << 10) >> 8)
-const _ISalnum uint16 = ((1 << 11) >> 8)
-
-var allocations uint64_t = uint64_t(int32(0))
-var allocations_total uint64_t = uint64_t(int32(0))
+var allocations uint64 = 0
 
 func check(e error) {
     if e != nil {
@@ -715,7 +59,7 @@ func check(e error) {
     }
 }
 
-type compiled_fn func(*byte, *Object_s, *Object_s) *Object_s
+type compiled_fn func(string, *Object_s, *Object_s) *Object_s
 type Symbol_s struct {
 	n string
 }
@@ -825,10 +169,7 @@ var filename string
 var lineno uint32 = uint32(int32(1))
 var max_object_write int32 = -int32(1)
 
-// assert_or_dump_ - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:440
-/* Forward-declare this to support assert_or_dump(): */ //
-//
-func assert_or_dump_(srcline uint32, ok int8, obj *Object_s, what *byte) {
+func assert_or_dump(srcline uint32, ok int8, obj *Object_s, what string) {
 	if int32(int8((ok))) != 0 || max_object_write != -int32(1) {
 		return
 	}
@@ -836,35 +177,30 @@ func assert_or_dump_(srcline uint32, ok int8, obj *Object_s, what *byte) {
 	max_object_write = int32(10)
 	object_write(stderr, obj)
 	fmt.Fprintf(stderr, "\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n", srcline)
-	func() {
-		if (map[bool]int32{false: 0, true: 1}[what == nil]) != 0 {
-		} else {
-			linux.AssertFail((&[]byte("what == NULL\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(451)), (&[]byte("void print_number(int *)\x00")[0]))
-		}
-	}()
+	my_exit(9)
 }
 
 // list_car - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:456
 func list_car(list *Object_s) *Object_s {
-	assert_or_dump_(uint32(int32(458)), (listp(list)), (list), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(458)), (listp(list)), (list), "expected list")
 	return (*list).car
 }
 
 // list_cdr - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:462
 func list_cdr(list *Object_s) *Object_s {
-	assert_or_dump_(uint32(int32(464)), (listp(list)), (list), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(464)), (listp(list)), (list), "expected list")
 	return (*(*list).cdr.obj())
 }
 
 // object_symbol - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:468
 func object_symbol(atom *Object_s) *Symbol_s {
-	assert_or_dump_(uint32(int32(470)), (atomicp(atom)), (atom), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected implementation atom\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(470)), (atomicp(atom)), (atom), "expected implementation atom")
 	return (*(*atom).cdr.sym())
 }
 
 // object_compiled - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:474
 func object_compiled(compiled *Object_s) compiled_fn {
-	assert_or_dump_(uint32(int32(476)), (compiledp(compiled)), (compiled), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected compiled function\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(476)), (compiledp(compiled)), (compiled), "expected compiled function")
 	return compiled_fn((*(*compiled).cdr.fn()))
 }
 
@@ -873,23 +209,7 @@ func object_new(car *Object_s, cdr *Object_s) *Object_s {
 	var obj *Object_s
 	new_obj := new(Object_s)
 	obj = (*Object_s)(unsafe.Pointer(new_obj))
-	if obj == nil {
-		for {
-			var m *byte = (&[]byte("no more memory\x00")[0])
-			if m != nil {
-				fmt.Fprintf(stderr, "%s\n", m)
-			}
-			if !quiet {
-				fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
-			}
-			my_exit(98)
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
-	}
 	allocations += 1
-	allocations_total += uint64_t((16))
 	(*obj).car = car
 	(*(*obj).cdr.obj()) = cdr
 	return obj
@@ -900,23 +220,7 @@ func object_new_compiled(fn compiled_fn) *Object_s {
 	var obj *Object_s
 	new_obj := new(Object_s)
 	obj = (*Object_s)(unsafe.Pointer(new_obj))
-	if obj == nil {
-		for {
-			var m *byte = (&[]byte("no more memory\x00")[0])
-			if m != nil {
-				fmt.Fprintf(stderr, "%s\n", m)
-			}
-			if !quiet {
-				fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
-			}
-			my_exit(99)
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
-	}
 	allocations += 1
-	allocations_total += uint64_t((16))
 	(*obj).car = p_compiled
 	(*(*obj).cdr.fn()) = fn
 	return obj
@@ -976,7 +280,7 @@ var p_sym_quote *Symbol_s = nil
 /* Environment (bindings). */ //
 //
 func binding_new(sym *Object_s, val *Object_s) *Object_s {
-	assert_or_dump_(uint32(int32(583)), (atomicp(sym)), (sym), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected implementation atom\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(583)), (atomicp(sym)), (sym), "expected implementation atom")
 	return object_new(sym, val)
 }
 
@@ -989,7 +293,7 @@ func binding_new(sym *Object_s, val *Object_s) *Object_s {
    to find oneself inside such deep stack traces during debugging.
 */ //
 //
-func binding_lookup(what *byte, key *Symbol_s, bindings *Object_s) *Object_s {
+func binding_lookup(what string, key *Symbol_s, bindings *Object_s) *Object_s {
 	if int8((nilp(bindings))) != 0 {
 		return p_nil
 	}
@@ -1001,7 +305,7 @@ func binding_lookup(what *byte, key *Symbol_s, bindings *Object_s) *Object_s {
 		io.WriteString(stderr,"\n\n")
 	}
 	for ; int8((noarch.NotInt8(nilp(bindings)))) != 0; bindings = list_cdr(bindings) {
-		assert_or_dump_(uint32(int32(616)), (listp(bindings)), (bindings), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(616)), (listp(bindings)), (bindings), "expected list")
 		var binding *Object_s = list_car(bindings)
 		if int32(int8((atomicp(binding)))) != 0 && int64(uintptr(unsafe.Pointer(object_symbol(binding)))) == int64(uintptr(unsafe.Pointer(key))) {
 			return p_nil
@@ -1031,7 +335,7 @@ func buffer_to_string(buf *bytes.Buffer) string {
 // token_putback - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:675
 func token_putback(token string) {
 	if lookahead_valid {
-		linux.AssertFail((&[]byte("lookahead_valid is true!\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(677)), (&[]byte("void print_number(int *)\x00")[0]))
+		my_assert((&[]byte("lookahead_valid is true!\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(677)), (&[]byte("void print_number(int *)\x00")[0]))
 	}
 	token_lookahead = token
 	lookahead_valid = true
@@ -1066,19 +370,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 			ch = tempVar
 			return tempVar
 		}()) == -int32(1) {
-			for {
-				var m *byte = nil
-				if m != nil {
-					fmt.Fprintf(stderr, "%s\n", m)
-				}
-				if !quiet {
-					fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations),  uint64_t(allocations_total))
-				}
-				my_exit(0)
-				if noarch.NotInt32((int32(0))) != 0 {
-					break
-				}
-			}
+			my_exit(0)
 		}
 		if ch == int32(';') {
 			for (func() int32 {
@@ -1108,19 +400,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 			ch = tempVar
 			return tempVar
 		}()) == -int32(1) {
-			for {
-				var m *byte = nil
-				if m != nil {
-					fmt.Fprintf(stderr, "%s\n", m)
-				}
-				if !quiet {
-					fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations),  uint64_t(allocations_total))
-				}
-				my_exit(0)
-				if noarch.NotInt32((int32(0))) != 0 {
-					break
-				}
-			}
+			my_exit(0)
 		}
 		if noarch.Strchr((&[]byte("()'\x00")[0]), ch) != nil || int32(*((*uint16)(func() unsafe.Pointer {
 			tempVar := (*linux.CtypeLoc())
@@ -1159,19 +439,8 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 		return object_new(object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_quote)))), object_new(tmp, p_nil))
 	}
 	if token == ")" {
-		for {
-			var m *byte = (&[]byte("unbalanced close paren\x00")[0])
-			if m != nil {
-				fmt.Fprintf(stderr, "%s\n", m)
-			}
-			if !quiet {
-				fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
-			}
-			my_exit(1)
-			if noarch.NotInt32((int32(0))) != 0 {
-				break
-			}
-		}
+		fmt.Fprintf(stderr, "unbalanced close paren\n")
+		my_exit(1)
 	}
 	if tracing && lineno != latest_lineno {
 		latest_lineno = lineno
@@ -1192,19 +461,8 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	if token == "." {
 		tmp = object_read(input, buf)
 		if token_get(input, buf) != ")" {
-			for {
-				var m *byte = (&[]byte("missing close parenthese for simple list\x00")[0])
-				if m != nil {
-					fmt.Fprintf(stderr, "%s\n", m)
-				}
-				if !quiet {
-					fmt.Fprintf(stderr, "allocations: %d; total: %d\n", uint64_t(allocations), uint64_t(allocations_total))
-				}
-				my_exit(3)
-				if noarch.NotInt32((int32(0))) != 0 {
-					break
-				}
-			}
+			fmt.Fprintf(stderr, "missing close parenthese for simple list\n")
+			my_exit(3)
 		}
 		return tmp
 	}
@@ -1224,7 +482,7 @@ func quotep(obj *Object_s) (c2goDefaultReturn int8) {
 	}
 	{
 		var car *Object_s = list_car(obj)
-		return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((compiledp(car)))) != 0 && int64(uintptr(noarch.CastInterfaceToPointer((func(*byte, *Object_s, *Object_s) *Object_s)((object_compiled(car)))))) == int64(uintptr(noarch.CastInterfaceToPointer(f_quote)))])))
+		return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((compiledp(car)))) != 0 && int64(uintptr(noarch.CastInterfaceToPointer((func(string, *Object_s, *Object_s) *Object_s)((object_compiled(car)))))) == int64(uintptr(noarch.CastInterfaceToPointer(f_quote)))])))
 	}
 	return
 }
@@ -1277,7 +535,7 @@ func object_write(output *bufio.Writer, obj *Object_s) {
 /* Evaluation */ //
 /* TODO: Throw an exception etc. */ //
 //
-func binding_for(what *byte, sym *Symbol_s, env *Object_s) *Object_s {
+func binding_for(what string, sym *Symbol_s, env *Object_s) *Object_s {
 	var tmp *Object_s
 	tmp = binding_lookup(what, sym, env)
 	if int8((nilp(tmp))) != 0 {
@@ -1285,7 +543,7 @@ func binding_for(what *byte, sym *Symbol_s, env *Object_s) *Object_s {
 		func() {
 			if (map[bool]int32{false: 0, true: 1}[(&[]byte("unbound symbol\x00")[0]) == nil]) != 0 {
 			} else {
-				linux.AssertFail((&[]byte("\"unbound symbol\" == NULL\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(891)), (&[]byte("void print_number(int *)\x00")[0]))
+				my_assert((&[]byte("\"unbound symbol\" == NULL\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(891)), (&[]byte("void print_number(int *)\x00")[0]))
 			}
 		}()
 	}
@@ -1296,19 +554,19 @@ func binding_for(what *byte, sym *Symbol_s, env *Object_s) *Object_s {
 /* Does not support traditional lambdas or labels; just the built-ins and
    our "unique" apply.  */ //
 //
-func eval(what *byte, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+func eval(what string, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
 	if int32(int8((nilp(exp)))) != 0 || int32(int8((compiledp(exp)))) != 0 {
 		return exp
 	}
 	if int8((atomicp(exp))) != 0 {
 		return binding_for(what, object_symbol(exp), env)
 	}
-	assert_or_dump_(uint32(int32(909)), (listp(exp)), (exp), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(909)), (listp(exp)), (exp), "expected list")
 	{
 		var func_ *Object_s = eval(what, list_car(exp), env)
 		var forms *Object_s = list_cdr(exp)
 		if int8((atomp(list_car(exp)))) != 0 {
-			what = symbol_name_as_bytes(object_symbol(list_car(exp)))
+			what = symbol_name(object_symbol(list_car(exp)))
 		}
 		if int8((compiledp(func_))) != 0 {
 			var fn compiled_fn
@@ -1352,13 +610,13 @@ func eval(what *byte, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_s
 */ //
 //
 func assert_zedbap(zedba *Object_s) {
-	assert_or_dump_(uint32(int32(965)), (listp(zedba)), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(967)), (listp(list_car(zedba))), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list with car being arglist\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(968)), (atomicp(list_car(list_car(zedba)))), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected zedba with 1st arg being mename\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(969)), (atomicp(list_car(list_cdr(list_car(zedba))))), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected zedba with 2nd arg being formlistparamname\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(970)), (atomicp(list_car(list_cdr(list_cdr(list_car(zedba)))))), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected zedba with 3rd arg being envparamname\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(971)), (finalp(list_cdr(list_cdr(list_car(zedba))))), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected zedba with only 3 args\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(973)), (finalp(list_cdr(zedba))), (zedba), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected zedba body to be last element of zedba as list\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(965)), (listp(zedba)), (zedba), "expected list")
+	assert_or_dump(uint32(int32(967)), (listp(list_car(zedba))), (zedba), "expected list with car being arglist")
+	assert_or_dump(uint32(int32(968)), (atomicp(list_car(list_car(zedba)))), (zedba), "expected zedba with 1st arg being mename")
+	assert_or_dump(uint32(int32(969)), (atomicp(list_car(list_cdr(list_car(zedba))))), (zedba), "expected zedba with 2nd arg being formlistparamname")
+	assert_or_dump(uint32(int32(970)), (atomicp(list_car(list_cdr(list_cdr(list_car(zedba)))))), (zedba), "expected zedba with 3rd arg being envparamname")
+	assert_or_dump(uint32(int32(971)), (finalp(list_cdr(list_cdr(list_car(zedba))))), (zedba), "expected zedba with only 3 args")
+	assert_or_dump(uint32(int32(973)), (finalp(list_cdr(zedba))), (zedba), "expected zedba body to be last element of zedba as list")
 }
 
 // apply - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:989
@@ -1375,7 +633,7 @@ func assert_zedbap(zedba *Object_s) {
    case this proves useful (e.g. a limit on the # of recursive
    invocations could be implemented this way), so this is allowed.  */ //
 //
-func apply(what *byte, func_ *Object_s, me *Object_s, forms *Object_s, env *Object_s) *Object_s {
+func apply(what string, func_ *Object_s, me *Object_s, forms *Object_s, env *Object_s) *Object_s {
 	var meparamname *Object_s
 	var formlistparamname *Object_s
 	var envparamname *Object_s
@@ -1383,11 +641,11 @@ func apply(what *byte, func_ *Object_s, me *Object_s, forms *Object_s, env *Obje
 	assert_zedbap(me)
 	{
 		var params *Object_s = list_car(func_)
-		assert_or_dump_(uint32(int32(1001)), (listp(params)), (params), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected list\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1001)), (listp(params)), (params), "expected list")
 		meparamname = list_car(params)
-		assert_or_dump_(uint32(int32(1005)), (listp(list_cdr(params))), (params), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected 2-element list\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1005)), (listp(list_cdr(params))), (params), "expected 2-element list")
 		formlistparamname = list_car(list_cdr(params))
-		assert_or_dump_(uint32(int32(1009)), (finalp(list_cdr(list_cdr(params)))), (params), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected 2-element list\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1009)), (finalp(list_cdr(list_cdr(params)))), (params), "expected 2-element list")
 		envparamname = list_car(list_cdr(list_cdr(params)))
 	}
 	return eval(what, list_car(list_cdr(func_)), (object_new(binding_new((meparamname), (func_)), (object_new(binding_new((formlistparamname), (forms)), (object_new(binding_new((envparamname), (env)), (env))))))))
@@ -1396,16 +654,16 @@ func apply(what *byte, func_ *Object_s, me *Object_s, forms *Object_s, env *Obje
 // f_quote - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1022
 /* (quote form) => form */ //
 //
-func f_quote(what *byte, args *Object_s, env *Object_s) *Object_s {
-	assert_or_dump_(uint32(int32(1024)), (finalp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected 1-element list\x00"), 1, 1))))[0])
+func f_quote(what string, args *Object_s, env *Object_s) *Object_s {
+	assert_or_dump(uint32(int32(1024)), (finalp(args)), (args), "expected 1-element list")
 	return list_car(args)
 }
 
 // f_atom - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1030
 /* (atom atom) => t if atom is an atom (including nil), nil otherwise */ //
 //
-func f_atom(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump_(uint32(int32(1032)), (finalp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected 1-element list\x00"), 1, 1))))[0])
+func f_atom(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+	assert_or_dump(uint32(int32(1032)), (finalp(args)), (args), "expected 1-element list")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
 		return func() *Object_s {
@@ -1423,14 +681,14 @@ func f_atom(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Objec
 /* (eq left-atom right-atom) => t if args are equal, nil otherwise */ //
 /* All nils are equal to each other in this implementation */ //
 //
-func f_eq(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump_(uint32(int32(1044)), (listp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected 1-element list\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(1045)), (finalp(list_cdr(args))), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected 1-element list\x00"), 1, 1))))[0])
+func f_eq(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+	assert_or_dump(uint32(int32(1044)), (listp(args)), (args), "expected 1-element list")
+	assert_or_dump(uint32(int32(1045)), (finalp(list_cdr(args))), (args), "expected 1-element list")
 	{
 		var left *Object_s = eval(what, list_car(args), env)
 		var right *Object_s = eval(what, list_car(list_cdr(args)), env)
-		assert_or_dump_(uint32(int32(1051)), (atomp(left)), (left), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected Lisp atom\x00"), 1, 1))))[0])
-		assert_or_dump_(uint32(int32(1052)), (atomp(right)), (right), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected Lisp atom\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1051)), (atomp(left)), (left), "expected Lisp atom")
+		assert_or_dump(uint32(int32(1052)), (atomp(right)), (right), "expected Lisp atom")
 		if int64(uintptr(unsafe.Pointer(left))) == int64(uintptr(unsafe.Pointer(right))) {
 			return object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_t))))
 		}
@@ -1451,9 +709,9 @@ func f_eq(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_
 // f_cons - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1065
 /* (cons car-arg cdr-arg) => (car-arg cdr-arg) */ //
 //
-func f_cons(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump_(uint32(int32(1067)), (listp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(1068)), (finalp(list_cdr(args))), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+func f_cons(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+	assert_or_dump(uint32(int32(1067)), (listp(args)), (args), "expected WHAT??")
+	assert_or_dump(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected WHAT??")
 	{
 		var car *Object_s = eval(what, list_car(args), env)
 		var cdr *Object_s = eval(what, list_car(list_cdr(args)), env)
@@ -1465,11 +723,11 @@ func f_cons(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Objec
 // f_car - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1079
 /* (car cons-arg) : cons-arg is a list => car of cons-arg */ //
 //
-func f_car(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump_(uint32(int32(1081)), (finalp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+func f_car(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+	assert_or_dump(uint32(int32(1081)), (finalp(args)), (args), "expected WHAT??")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
-		assert_or_dump_(uint32(int32(1086)), (listp(arg)), (arg), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1086)), (listp(arg)), (arg), "expected WHAT??")
 		return list_car(arg)
 	}
 	return
@@ -1478,11 +736,11 @@ func f_car(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object
 // f_cdr - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1093
 /* (cdr cons-arg) : cons-arg is a list => cdr of cons-arg */ //
 //
-func f_cdr(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump_(uint32(int32(1095)), (finalp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+func f_cdr(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+	assert_or_dump(uint32(int32(1095)), (finalp(args)), (args), "expected WHAT??")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
-		assert_or_dump_(uint32(int32(1100)), (listp(arg)), (arg), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1100)), (listp(arg)), (arg), "expected WHAT??")
 		return list_cdr(arg)
 	}
 	return
@@ -1494,15 +752,15 @@ func f_cdr(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object
    for the first if-arg in the list that is not nil (true), otherwise
    nil. */ //
 //
-func f_cond(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+func f_cond(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
 	if int8((nilp(args))) != 0 {
 		return p_nil
 	}
-	assert_or_dump_(uint32(int32(1115)), (listp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(1115)), (listp(args)), (args), "expected WHAT??")
 	{
 		var pair *Object_s = list_car(args)
-		assert_or_dump_(uint32(int32(1120)), (listp(pair)), (pair), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
-		assert_or_dump_(uint32(int32(1121)), (finalp(list_cdr(pair))), (pair), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1120)), (listp(pair)), (pair), "expected WHAT??")
+		assert_or_dump(uint32(int32(1121)), (finalp(list_cdr(pair))), (pair), "expected WHAT??")
 		{
 			var if_arg *Object_s = list_car(pair)
 			var then_form *Object_s = list_car(list_cdr(pair))
@@ -1524,19 +782,19 @@ func f_cond(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Objec
 /* This form allows direct replacement of global environment.
    E.g. (defglobal (cdr (defglobal))) pops off the top binding. */ //
 //
-func f_defglobal(what *byte, args *Object_s, env *Object_s) *Object_s {
+func f_defglobal(what string, args *Object_s, env *Object_s) *Object_s {
 	if int8((nilp(args))) != 0 {
 		return p_environment
 	}
-	assert_or_dump_(uint32(int32(1145)), (listp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+	assert_or_dump(uint32(int32(1145)), (listp(args)), (args), "expected WHAT??")
 	if int8((nilp(list_cdr(args)))) != 0 {
 		p_environment = eval(what, list_car(args), env)
 	} else {
-		assert_or_dump_(uint32(int32(1153)), (finalp(list_cdr(args))), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1153)), (finalp(list_cdr(args))), (args), "expected WHAT??")
 		{
 			var sym *Object_s = eval(what, list_car(args), env)
 			var form *Object_s = eval(what, list_car(list_cdr(args)), env)
-			assert_or_dump_(uint32(int32(1159)), (atomicp(sym)), (sym), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+			assert_or_dump(uint32(int32(1159)), (atomicp(sym)), (sym), "expected WHAT??")
 			p_environment = object_new(binding_new((object_new(p_atomic, (*Object_s)(unsafe.Pointer((object_symbol(sym)))))), (form)), (p_environment))
 		}
 	}
@@ -1549,9 +807,9 @@ func f_defglobal(what *byte, args *Object_s, env *Object_s) *Object_s {
    version .go compilers don't choose different order of evaluations
    and so mess up the tracefiles. */ //
 //
-func f_eval(what *byte, args *Object_s, env *Object_s) *Object_s {
-	assert_or_dump_(uint32(int32(1173)), (listp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
-	assert_or_dump_(uint32(int32(1174)), int8((int8((map[bool]int32{false: 0, true: 1}[int32(int8((nilp(list_cdr(args))))) != 0 || int32(int8((finalp(list_cdr(args))))) != 0])))), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+func f_eval(what string, args *Object_s, env *Object_s) *Object_s {
+	assert_or_dump(uint32(int32(1173)), (listp(args)), (args), "expected WHAT??")
+	assert_or_dump(uint32(int32(1174)), int8((int8((map[bool]int32{false: 0, true: 1}[int32(int8((nilp(list_cdr(args))))) != 0 || int32(int8((finalp(list_cdr(args))))) != 0])))), (args), "expected WHAT??")
 	var n_env *Object_s = func() *Object_s {
 		if int32(int8((nilp(list_cdr(args))))) != 0 {
 			return env
@@ -1567,25 +825,25 @@ func f_eval(what *byte, args *Object_s, env *Object_s) *Object_s {
    (presumably) itself, forms to be bound to zedba's arguments, and
    environment for such bindings (default is current env) */ //
 //
-func f_apply(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump_(uint32(int32(1189)), (listp(args)), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+func f_apply(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
+	assert_or_dump(uint32(int32(1189)), (listp(args)), (args), "expected WHAT??")
 	{
 		var func_ *Object_s = eval(what, list_car(args), env)
 		var rest *Object_s = list_cdr(args)
 		if int8((atomp(list_car(args)))) != 0 {
-			what = symbol_name_as_bytes(object_symbol(list_car(args)))
+			what = symbol_name(object_symbol(list_car(args)))
 		}
-		assert_or_dump_(uint32(int32(1200)), (listp(rest)), (rest), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+		assert_or_dump(uint32(int32(1200)), (listp(rest)), (rest), "expected WHAT??")
 		{
 			var me *Object_s = eval(what, list_car(rest), env)
 			var new_rest *Object_s = list_cdr(rest)
 			rest = new_rest
-			assert_or_dump_(uint32(int32(1207)), (listp(rest)), (rest), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+			assert_or_dump(uint32(int32(1207)), (listp(rest)), (rest), "expected WHAT??")
 			{
 				var forms *Object_s = eval(what, list_car(rest), env)
 				var new_rest *Object_s = list_cdr(rest)
 				rest = new_rest
-				assert_or_dump_(uint32(int32(1214)), int8((int8((map[bool]int32{false: 0, true: 1}[int32(int8((nilp(rest)))) != 0 || int32(int8((finalp(rest)))) != 0])))), (rest), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+				assert_or_dump(uint32(int32(1214)), int8((int8((map[bool]int32{false: 0, true: 1}[int32(int8((nilp(rest)))) != 0 || int32(int8((finalp(rest)))) != 0])))), (rest), "expected WHAT??")
 				return apply(what, func_, me, forms, func() *Object_s {
 					if int32(int8((nilp(rest)))) != 0 {
 						return p_nil
@@ -1602,8 +860,8 @@ func f_apply(what *byte, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 // f_dot_symbol_dump - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1223
 /* (.symbol_dump) : dump symbol names along with their struct Symbol_s * objects */ //
 //
-func f_dot_symbol_dump(what *byte, args *Object_s, env *Object_s) *Object_s {
-	assert_or_dump_(uint32(int32(1225)), int8((int8((map[bool]int32{false: 0, true: 1}[args == nil])))), (args), &(*(*[]byte)(unsafe.Pointer(noarch.UnsafeSliceToSlice([]byte("expected WHAT??\x00"), 1, 1))))[0])
+func f_dot_symbol_dump(what string, args *Object_s, env *Object_s) *Object_s {
+	assert_or_dump(uint32(int32(1225)), int8((int8((map[bool]int32{false: 0, true: 1}[args == nil])))), (args), "expected WHAT??")
 	symbol_dump()
 	return p_nil
 }
@@ -1639,7 +897,6 @@ func initialize() {
 	symbol_strdup = int8((int8(int32(1))))
 }
 
-var filenameZ string  // TODO: convert all 'what' stuff to string
 var prof interface { Stop() }
 var inBufSize int = 4096  // Default on my MacBook Pro 2018-08-31
 
@@ -1686,8 +943,7 @@ func main() {
 	for {
 		var obj *Object_s = object_read(in, buf)
 		if !quiet {
-			filenameZ = filename + "\x00"
-			object_write(stdout, eval((*byte)(unsafe.Pointer(&filenameZ)), obj, p_environment))
+			object_write(stdout, eval(filename, obj, p_environment))
 			fmt.Fprintf(stdout, "\n")
 			stdout.Flush()
 		}
@@ -1702,6 +958,9 @@ func my_exit(rc int) {
 	} else if cpuprofile != "" {
 		pprof.StopCPUProfile()
 		fmt.Fprintf(os.Stderr, "Profiling stopped. See file `%s'.\n", cpuprofile);
+	}
+	if !quiet {
+		fmt.Fprintf(stderr, "allocations: %d\n", allocations)
 	}
 	os.Exit(rc)
 }
