@@ -1,5 +1,7 @@
 Performance Analysis of LispZeroGo versus LispZero
 
+Using: https://blog.golang.org/profiling-go-programs
+
 2018-08-31 jcburley: Hand-modified version of c2go-generated variant
 of lisp-zero-single.c, with all Malloc() calls removed/replaced (with
 new()/make()), among other "nativizations" performed to the code. (It
