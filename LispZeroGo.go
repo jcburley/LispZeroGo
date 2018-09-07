@@ -24,8 +24,8 @@ func my_assert(t *byte, w *byte, l uint32, x *byte) {
 	if *t == 0 {
 		return
 	}
-	stdout.Flush()
 	stderr.Flush()
+	stdout.Flush()
 	linux.AssertFail(t, w, l, x)
 }
 
@@ -169,8 +169,8 @@ func assert_or_dump(srcline uint32, ok int8, obj *Object_s, what string) {
 	fmt.Fprintf(stderr, "\nEnvironment:\n")
 	object_write(stderr, p_environment)
 	fmt.Fprintf(stderr, "\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n", srcline)
-	stdout.Flush()
 	stderr.Flush()
+	stdout.Flush()
 	panic("assertion failure")
 }
 
@@ -439,6 +439,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	if tracing && lineno != latest_lineno {
 		latest_lineno = lineno
 		fmt.Fprintf(stderr, "%s:%d: Seen `%s'.\n", filename, lineno, token)
+		stderr.Flush()
 	}
 	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
 }
@@ -496,6 +497,7 @@ func quotep(obj *Object_s) (c2goDefaultReturn int8) {
 
 /* TODO: Print name of function. */
 func object_write(output *bufio.Writer, obj *Object_s) {
+	stderr.Flush()
 	if int8((nilp(obj))) != 0 {
 		fmt.Fprintf(output, "()")
 		return
@@ -907,12 +909,15 @@ func main() {
 		switch profiler {
 		case "pkg/profile":
 			prof = profile.Start(profile.ProfilePath(cpuprofile))
+			defer finish()
 		case "runtime/pprof":
 			f, err := os.Create(cpuprofile)
 			check(err)
 			runtime.SetCPUProfileRate(500)
 			pprof.StartCPUProfile(f)
 			fmt.Fprintf(stderr, "Profiling started. See file `%s'.\n", cpuprofile);
+			stderr.Flush()
+			defer finish()
 		default:
 			fmt.Fprintf(stderr, "Unrecognized profiler: %s\n  Use 'pkg/profile' or 'runtime/pprof'.\n", profiler);
 			os.Exit(96)
@@ -934,6 +939,7 @@ func main() {
 
 	if !quiet {
 		fmt.Fprintf(stderr, "Underlying input buffer size: %d\n", in.Size())
+		stderr.Flush()
 	}
 	
 	map_sym = make(Symbol_MAP)
@@ -944,8 +950,7 @@ func main() {
 	for {
 		var obj *Object_s = object_read(in, buf)
 		if !quiet {
-			object_write(stdout, eval(filename, obj, p_environment))
-			fmt.Fprintf(stdout, "\n")
+			object_write(stdout, eval(filename, obj, p_environment)); nl(stdout)
 			stdout.Flush()
 		}
 	}
@@ -953,7 +958,7 @@ func main() {
 	my_exit(0)
 }
 
-func my_exit(rc int) {
+func finish() {
 	if prof != nil {
 		prof.Stop()
 	} else if cpuprofile != "" {
@@ -963,15 +968,17 @@ func my_exit(rc int) {
 	if !quiet {
 		fmt.Fprintf(stderr, "allocations: %d\n", allocations)
 	}
-	stdout.Flush()
 	stderr.Flush()
+	stdout.Flush()
+}
+
+func my_exit(rc int) {
 	os.Exit(rc)
 }
 
 // debug_output - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1328
 func debug_output(obj *Object_s) {
-	object_write(stdout, obj)
-	fmt.Fprintf(stdout, "\n")
+	object_write(stdout, obj); nl(stdout)
 	stdout.Flush()
 }
 
