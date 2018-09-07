@@ -729,8 +729,8 @@ func f_eq(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object
 /* (cons car-arg cdr-arg) => (car-arg cdr-arg) */ //
 //
 func f_cons(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1067)), (listp(args)), (args), "expected arglist")
-	assert_or_dump(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected only two args")
+	assert_or_dump(uint32(int32(1067)), (listp(args)), (args), "expected arglist for cons")
+	assert_or_dump(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected 2 arguments for cons")
 	{
 		var car *Object_s = eval(what, list_car(args), env)
 		var cdr *Object_s = eval(what, list_car(list_cdr(args)), env)
@@ -743,10 +743,10 @@ func f_cons(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 /* (car cons-arg) : cons-arg is a list => car of cons-arg */ //
 //
 func f_car(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1081)), (finalp(args)), (args), "expected WHAT??")
+	assert_or_dump(uint32(int32(1081)), (finalp(args)), (args), "expected a single argument for car")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
-		assert_or_dump(uint32(int32(1086)), (listp(arg)), (arg), "expected WHAT??")
+		assert_or_dump(uint32(int32(1086)), (listp(arg)), (arg), "expected a list for car")
 		return list_car(arg)
 	}
 	return
@@ -756,10 +756,10 @@ func f_car(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Objec
 /* (cdr cons-arg) : cons-arg is a list => cdr of cons-arg */ //
 //
 func f_cdr(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1095)), (finalp(args)), (args), "expected WHAT??")
+	assert_or_dump(uint32(int32(1095)), (finalp(args)), (args), "expected a single argument for cdr")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
-		assert_or_dump(uint32(int32(1100)), (listp(arg)), (arg), "expected WHAT??")
+		assert_or_dump(uint32(int32(1100)), (listp(arg)), (arg), "expected a list for cdr")
 		return list_cdr(arg)
 	}
 	return
@@ -775,11 +775,11 @@ func f_cond(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 	if int8((nilp(args))) != 0 {
 		return p_nil
 	}
-	assert_or_dump(uint32(int32(1115)), (listp(args)), (args), "expected WHAT??")
+	assert_or_dump(uint32(int32(1115)), (listp(args)), (args), "expected arglist for cond")
 	{
 		var pair *Object_s = list_car(args)
-		assert_or_dump(uint32(int32(1120)), (listp(pair)), (pair), "expected WHAT??")
-		assert_or_dump(uint32(int32(1121)), (finalp(list_cdr(pair))), (pair), "expected WHAT??")
+		assert_or_dump(uint32(int32(1120)), (listp(pair)), (pair), "expected a list for the first argument of cond")
+		assert_or_dump(uint32(int32(1121)), (finalp(list_cdr(pair))), (pair), "expected a 2-item list for each item in cond arglist")
 		{
 			var if_arg *Object_s = list_car(pair)
 			var then_form *Object_s = list_car(list_cdr(pair))
