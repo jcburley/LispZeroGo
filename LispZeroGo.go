@@ -166,6 +166,8 @@ func assert_or_dump(srcline uint32, ok int8, obj *Object_s, what string) {
 	fmt.Fprintf(stderr, "ERROR at %d: %s, but got:\n", lineno, what)
 	max_object_write = 10
 	object_write(stderr, obj)
+	fmt.Fprintf(stderr, "\nEnvironment:\n")
+	object_write(stderr, p_environment)
 	fmt.Fprintf(stderr, "\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n", srcline)
 	stdout.Flush()
 	stderr.Flush()
@@ -446,20 +448,20 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 //
 func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	var first *Object_s = p_nil
-	var next **Object_s = &first
-
-	fmt.Fprintf(stderr, "new: next=%v\n", next);
-
 	var prev *Object_s = nil
+
+	fmt.Fprintf(stderr, "new:\n");
+
+	var cur *Object_s
 	for {
 		var token string = token_get(input, buf)
 		fmt.Fprintf(stderr, "token: %s\n", token)
 		if token == ")" {
-			prev = p_nil
+			cur = p_nil
 			break
 		}
 		if token == "." {
-			prev = object_read(input, buf)
+			cur = object_read(input, buf)
 			if token_get(input, buf) != ")" {
 				if token_get(input, buf) != ")" {
 					fmt.Fprintf(stderr, "missing close parenthese for simple list\n")
@@ -471,26 +473,20 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 
 		token_putback(token)
 
-		var tmp = object_new(object_read(input, buf), nil); object_write(stderr, tmp); nl(stderr)
-		if next == &first {
-			fmt.Fprintf(stderr, "loop: next=%v==&first=%v: tmp=%v &tmp=%v\n", next, &first, tmp, &tmp)
-			first = tmp
-			object_write(stderr, first); nl(stderr)
+		cur = object_new(object_read(input, buf), nil); fmt.Fprintf(stderr, "read: "); object_write(stderr, cur); nl(stderr)
+		if prev == nil {
+			fmt.Fprintf(stderr, "loop: cur=%v\n", cur)
+			first = cur
+			fmt.Fprintf(stderr, "first: "); object_write(stderr, first); nl(stderr)
 		} else {
-			fmt.Fprintf(stderr, "loop: next=%v!=&first=%v: tmp=%v &tmp=%v\n", next, &first, tmp, &tmp)
-			*((*next).cdr.p_obj()) = tmp
-			object_write(stderr, *next); nl(stderr)
+			fmt.Fprintf(stderr, "loop: cur=%v prev=%v\n", cur, prev)
+			*(prev.cdr.p_obj()) = cur
+			fmt.Fprintf(stderr, "first: "); object_write(stderr, first); nl(stderr)
 		}
-		next = &prev
-		prev = tmp
+		prev = cur
 	}
 
-	if next == &first {
-		fmt.Fprintf(stderr, "done: next=%v==&first=%v: prev=%v &prev=%v\n", next, &first, prev, &prev); object_write(stderr, first); nl(stderr)
-		return first
-	}
-
-	fmt.Fprintf(stderr, "done: next=%v!=&first=%v: prev=%v &prev=%v\n", next, &first, prev, &prev); object_write(stderr, first); nl(stderr)
+	fmt.Fprintf(stderr, "done: "); object_write(stderr, first); nl(stderr)
 
 	return first
 }
