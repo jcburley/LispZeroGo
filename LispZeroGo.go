@@ -58,16 +58,6 @@ type Cdr struct {
 	_fn compiled_fn
 }
 
-// func (unionVar *Cdr_u) copyDELETE() Cdr_u {
-// 	var buffer [8]byte
-// 	for i := range buffer {
-// 		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-// 	}
-// 	var newUnion Cdr_u
-// 	newUnion.memory = unsafe.Pointer(&buffer)
-// 	return newUnion
-// }
-
 func (c *Cdr) get_obj() **Object_s {
 	return &(c._obj)
 }
