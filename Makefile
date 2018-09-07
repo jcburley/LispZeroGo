@@ -4,14 +4,16 @@ RESULTFILES=LispZeroGo zero-test.out
 
 all: LispZeroGo zero-test
 
-LispZeroGo: LispZeroGo.go
+LispZeroGo: $(GOBIN)/LispZeroGo
+
+$(GOBIN)/LispZeroGo: LispZeroGo.go
 	go build
 
 zero-test: zero-test.gold zero-test.out
 	diff -u zero-test.gold zero-test.out
 
 zero-test.out: LispZeroGo zero-test.lisp
-	$(GOPATH)/bin/LispZeroGo zero-test.lisp > zero-test.out
+	$(GOBIN)/LispZeroGo zero-test.lisp > zero-test.out
 
 zero-new-gold: zero-test.out
 	rm -f zero-test.gold
@@ -22,6 +24,6 @@ install: LispZeroGo
 	go install
 
 clean:
-	rm -f $RESULTFILES
+	rm -f $(RESULTFILES)
 
-.PHONY: all clean zero-test zero-new-gold install
+.PHONY: all LispZeroGo clean zero-test zero-new-gold install
