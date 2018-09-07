@@ -448,14 +448,11 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 //
 func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	var first *Object_s = p_nil
-	var prev *Object_s = nil
-
-	fmt.Fprintf(stderr, "new:\n");
+	var next **Object_s = &first
 
 	var cur *Object_s
 	for {
 		var token string = token_get(input, buf)
-		fmt.Fprintf(stderr, "token: %s\n", token)
 		if token == ")" {
 			cur = p_nil
 			break
@@ -473,20 +470,10 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 
 		token_putback(token)
 
-		cur = object_new(object_read(input, buf), nil); fmt.Fprintf(stderr, "read: "); object_write(stderr, cur); nl(stderr)
-		if prev == nil {
-			fmt.Fprintf(stderr, "loop: cur=%v\n", cur)
-			first = cur
-			fmt.Fprintf(stderr, "first: "); object_write(stderr, first); nl(stderr)
-		} else {
-			fmt.Fprintf(stderr, "loop: cur=%v prev=%v\n", cur, prev)
-			*(prev.cdr.p_obj()) = cur
-			fmt.Fprintf(stderr, "first: "); object_write(stderr, first); nl(stderr)
-		}
-		prev = cur
+		cur = object_new(object_read(input, buf), nil)
+		*next = cur
+		next = (cur.cdr.obj())
 	}
-
-	fmt.Fprintf(stderr, "done: "); object_write(stderr, first); nl(stderr)
 
 	return first
 }
@@ -976,6 +963,8 @@ func my_exit(rc int) {
 	if !quiet {
 		fmt.Fprintf(stderr, "allocations: %d\n", allocations)
 	}
+	stdout.Flush()
+	stderr.Flush()
 	os.Exit(rc)
 }
 
