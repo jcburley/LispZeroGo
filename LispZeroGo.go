@@ -444,9 +444,25 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
 }
 
-// list_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:781
-/* Make sure we first read the object before going on to read the rest of the list. */ //
-//
+func list_read_recursive(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
+	var token string = token_get(input, buf)
+	var tmp *Object_s
+	if token == ")" {
+		return p_nil
+	}
+	if token == "." {
+		tmp = object_read(input, buf)
+		if token_get(input, buf) != ")" {
+			fmt.Fprintf(stderr, "missing close parenthese for simple list\n")
+			my_exit(3)
+		}
+		return tmp
+	}
+	token_putback(token)
+	tmp = object_read(input, buf)
+	return object_new(tmp, list_read_recursive(input, buf))
+}
+
 func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	var first *Object_s = p_nil
 	var next **Object_s = &first
