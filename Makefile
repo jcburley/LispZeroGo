@@ -11,17 +11,17 @@ zero-test: zero-test.gold zero-test.out
 	diff -u zero-test.gold zero-test.out
 
 zero-test.out: LispZeroGo zero-test.lisp
-	./LispZeroGo < zero-test.lisp > zero-test.out
+	$(GOPATH)/bin/LispZeroGo < zero-test.lisp > zero-test.out
 
 zero-new-gold: zero-test.out
 	rm -f zero-test.gold
 	cp zero-test.out zero-test.gold
 	chmod a-w zero-test.gold
 
+install: LispZeroGo
+	go install
+
 clean:
 	rm -f $RESULTFILES
-
-install: all
-	go install
 
 .PHONY: all clean zero-test zero-new-gold install
