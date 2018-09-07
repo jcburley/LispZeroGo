@@ -1010,6 +1010,7 @@ func finish() {
 }
 
 func my_exit(rc int) {
+	finish()
 	os.Exit(rc)
 }
 
