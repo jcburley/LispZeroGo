@@ -24,8 +24,8 @@ func my_assert(t *byte, w *byte, l uint32, x *byte) {
 	if *t == 0 {
 		return
 	}
-	stdout.Flush()
 	stderr.Flush()
+	stdout.Flush()
 	linux.AssertFail(t, w, l, x)
 }
 
@@ -35,6 +35,10 @@ var quiet bool
 var tracing bool
 
 var allocations uint64 = 0
+
+func nl(s *bufio.Writer) {
+	s.WriteString("\n")
+}
 
 func check(e error) {
     if e != nil {
@@ -63,6 +67,9 @@ func (unionVar *Cdr_u) obj() **Object_s {
 		unionVar.memory = unsafe.Pointer(&buffer)
 	}
 	return (**Object_s)(unionVar.memory)
+}
+func (unionVar *Cdr_u) p_obj() **Object_s {
+	return (**Object_s)(unsafe.Pointer(&unionVar.memory))
 }
 func (unionVar *Cdr_u) sym() **Symbol_s {
 	if unionVar.memory == nil {
@@ -153,14 +160,18 @@ var lineno uint32 = uint32(int32(1))
 var max_object_write int32 = -int32(1)
 
 func assert_or_dump(srcline uint32, ok int8, obj *Object_s, what string) {
-	if int32(int8((ok))) != 0 || max_object_write != -int32(1) {
+	if ok != 0 || max_object_write != -1 {
 		return
 	}
 	fmt.Fprintf(stderr, "ERROR at %d: %s, but got:\n", lineno, what)
-	max_object_write = int32(10)
+	max_object_write = 10
 	object_write(stderr, obj)
+	fmt.Fprintf(stderr, "\nEnvironment:\n")
+	object_write(stderr, p_environment)
 	fmt.Fprintf(stderr, "\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n", srcline)
-	my_exit(9)
+	stderr.Flush()
+	stdout.Flush()
+	panic("assertion failure")
 }
 
 // list_car - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:456
@@ -281,7 +292,7 @@ func binding_lookup(what string, key *Symbol_s, bindings *Object_s) *Object_s {
 		return p_nil
 	}
 	if tracing {
-		fmt.Fprintf(os.Stderr, "%s:%d: Searching for `%s' in:\n", filename, lineno, (*key).n)
+		fmt.Fprintf(stderr, "%s:%d: Searching for `%s' in:\n", filename, lineno, (*key).n)
 		max_object_write = int32(10)
 		object_write(stderr, bindings)
 		max_object_write = -int32(1)
@@ -427,7 +438,8 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	}
 	if tracing && lineno != latest_lineno {
 		latest_lineno = lineno
-		fmt.Fprintf(os.Stderr, "%s:%d: Seen `%s'.\n", filename, lineno, token)
+		fmt.Fprintf(stderr, "%s:%d: Seen `%s'.\n", filename, lineno, token)
+		stderr.Flush()
 	}
 	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
 }
@@ -436,22 +448,35 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 /* Make sure we first read the object before going on to read the rest of the list. */ //
 //
 func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
-	var token string = token_get(input, buf)
-	var tmp *Object_s
-	if token == ")" {
-		return p_nil
-	}
-	if token == "." {
-		tmp = object_read(input, buf)
-		if token_get(input, buf) != ")" {
-			fmt.Fprintf(stderr, "missing close parenthese for simple list\n")
-			my_exit(3)
+	var first *Object_s = p_nil
+	var next **Object_s = &first
+
+	var cur *Object_s
+	for {
+		var token string = token_get(input, buf)
+		if token == ")" {
+			cur = p_nil
+			break
 		}
-		return tmp
+		if token == "." {
+			cur = object_read(input, buf)
+			if token_get(input, buf) != ")" {
+				if token_get(input, buf) != ")" {
+					fmt.Fprintf(stderr, "missing close parenthese for simple list\n")
+					my_exit(3)
+				}
+			}
+			break
+		}
+
+		token_putback(token)
+
+		cur = object_new(object_read(input, buf), nil)
+		*next = cur
+		next = (cur.cdr.obj())
 	}
-	token_putback(token)
-	tmp = object_read(input, buf)
-	return object_new(tmp, list_read(input, buf))
+
+	return first
 }
 
 // quotep - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:806
@@ -472,6 +497,7 @@ func quotep(obj *Object_s) (c2goDefaultReturn int8) {
 
 /* TODO: Print name of function. */
 func object_write(output *bufio.Writer, obj *Object_s) {
+	stderr.Flush()
 	if int8((nilp(obj))) != 0 {
 		fmt.Fprintf(output, "()")
 		return
@@ -522,13 +548,7 @@ func binding_for(what string, sym *Symbol_s, env *Object_s) *Object_s {
 	var tmp *Object_s
 	tmp = binding_lookup(what, sym, env)
 	if int8((nilp(tmp))) != 0 {
-		fmt.Fprintf(stderr, "Unbound symbol \"%s\"\n", symbol_name(sym))
-		func() {
-			if (map[bool]int32{false: 0, true: 1}[(&[]byte("unbound symbol\x00")[0]) == nil]) != 0 {
-			} else {
-				my_assert((&[]byte("\"unbound symbol\" == NULL\x00")[0]), (&[]byte("/home/craig/github/LispZero/lisp-zero-single.c\x00")[0]), uint32(int32(891)), (&[]byte("void print_number(int *)\x00")[0]))
-			}
-		}()
+		assert_or_dump(908, ^nilp(tmp), env, fmt.Sprintf("Unbound symbol `%s'", symbol_name(sym)))
 	}
 	return list_cdr(tmp)
 }
@@ -693,8 +713,8 @@ func f_eq(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object
 /* (cons car-arg cdr-arg) => (car-arg cdr-arg) */ //
 //
 func f_cons(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1067)), (listp(args)), (args), "expected WHAT??")
-	assert_or_dump(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected WHAT??")
+	assert_or_dump(uint32(int32(1067)), (listp(args)), (args), "expected arglist")
+	assert_or_dump(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected only two args")
 	{
 		var car *Object_s = eval(what, list_car(args), env)
 		var cdr *Object_s = eval(what, list_car(list_cdr(args)), env)
@@ -889,14 +909,17 @@ func main() {
 		switch profiler {
 		case "pkg/profile":
 			prof = profile.Start(profile.ProfilePath(cpuprofile))
+			defer finish()
 		case "runtime/pprof":
 			f, err := os.Create(cpuprofile)
 			check(err)
 			runtime.SetCPUProfileRate(500)
 			pprof.StartCPUProfile(f)
-			fmt.Fprintf(os.Stderr, "Profiling started. See file `%s'.\n", cpuprofile);
+			fmt.Fprintf(stderr, "Profiling started. See file `%s'.\n", cpuprofile);
+			stderr.Flush()
+			defer finish()
 		default:
-			fmt.Fprintf(os.Stderr, "Unrecognized profiler: %s\n  Use 'pkg/profile' or 'runtime/pprof'.\n", profiler);
+			fmt.Fprintf(stderr, "Unrecognized profiler: %s\n  Use 'pkg/profile' or 'runtime/pprof'.\n", profiler);
 			os.Exit(96)
 		}
 	}
@@ -910,12 +933,13 @@ func main() {
 		filename = "<stdin>"
 		in = bufio.NewReaderSize(stdin, inBufSize)
 	} else {
-		fmt.Fprintf(os.Stderr, "Excess command-line arguments starting with: %s\n", flag.Arg(1))
+		fmt.Fprintf(stderr, "Excess command-line arguments starting with: %s\n", flag.Arg(1))
 		my_exit(97)
 	}
 
 	if !quiet {
-		fmt.Fprintf(os.Stderr, "Underlying input buffer size: %d\n", in.Size())
+		fmt.Fprintf(stderr, "Underlying input buffer size: %d\n", in.Size())
+		stderr.Flush()
 	}
 	
 	map_sym = make(Symbol_MAP)
@@ -926,8 +950,7 @@ func main() {
 	for {
 		var obj *Object_s = object_read(in, buf)
 		if !quiet {
-			object_write(stdout, eval(filename, obj, p_environment))
-			fmt.Fprintf(stdout, "\n")
+			object_write(stdout, eval(filename, obj, p_environment)); nl(stdout)
 			stdout.Flush()
 		}
 	}
@@ -935,23 +958,27 @@ func main() {
 	my_exit(0)
 }
 
-func my_exit(rc int) {
+func finish() {
 	if prof != nil {
 		prof.Stop()
 	} else if cpuprofile != "" {
 		pprof.StopCPUProfile()
-		fmt.Fprintf(os.Stderr, "Profiling stopped. See file `%s'.\n", cpuprofile);
+		fmt.Fprintf(stderr, "Profiling stopped. See file `%s'.\n", cpuprofile);
 	}
 	if !quiet {
 		fmt.Fprintf(stderr, "allocations: %d\n", allocations)
 	}
+	stderr.Flush()
+	stdout.Flush()
+}
+
+func my_exit(rc int) {
 	os.Exit(rc)
 }
 
 // debug_output - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1328
 func debug_output(obj *Object_s) {
-	object_write(stdout, obj)
-	fmt.Fprintf(stdout, "\n")
+	object_write(stdout, obj); nl(stdout)
 	stdout.Flush()
 }
 
