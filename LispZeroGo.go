@@ -964,9 +964,9 @@ func main() {
 	initialize()
 
 	for {
-		var obj *Object_s = object_read(in, buf)
+		var obj *Object_s = eval(filename, object_read(in, buf), p_environment)
 		if !quiet {
-			object_write(stdout, eval(filename, obj, p_environment)); nl(stdout)
+			object_write(stdout, obj); nl(stdout)
 			stdout.Flush()
 		}
 	}
