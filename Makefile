@@ -11,7 +11,7 @@ zero-test: zero-test.gold zero-test.out
 	diff -u zero-test.gold zero-test.out
 
 zero-test.out: LispZeroGo zero-test.lisp
-	$(GOPATH)/bin/LispZeroGo < zero-test.lisp > zero-test.out
+	$(GOPATH)/bin/LispZeroGo zero-test.lisp > zero-test.out
 
 zero-new-gold: zero-test.out
 	rm -f zero-test.gold
