@@ -33,6 +33,8 @@ var profiler string
 var cpuprofile string
 var quiet bool
 var tracing bool
+var dump_symbols bool
+var dump_environment bool
 
 var allocations uint64 = 0
 
@@ -50,51 +52,48 @@ type compiled_fn func(string, *Object_s, *Object_s) *Object_s
 type Symbol_s struct {
 	n string
 }
-type Cdr_u struct{ memory unsafe.Pointer }
+type Cdr struct {
+	_obj *Object_s
+	_sym *Symbol_s
+	_fn compiled_fn
+}
 
-func (unionVar *Cdr_u) copy() Cdr_u {
-	var buffer [8]byte
-	for i := range buffer {
-		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
-	}
-	var newUnion Cdr_u
-	newUnion.memory = unsafe.Pointer(&buffer)
-	return newUnion
+// func (unionVar *Cdr_u) copyDELETE() Cdr_u {
+// 	var buffer [8]byte
+// 	for i := range buffer {
+// 		buffer[i] = (*((*[8]byte)(unionVar.memory)))[i]
+// 	}
+// 	var newUnion Cdr_u
+// 	newUnion.memory = unsafe.Pointer(&buffer)
+// 	return newUnion
+// }
+
+func (c *Cdr) get_obj() **Object_s {
+	return &(c._obj)
 }
-func (unionVar *Cdr_u) obj() **Object_s {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (**Object_s)(unionVar.memory)
+func (c *Cdr) get_sym() **Symbol_s {
+	return &(c._sym)
 }
-func (unionVar *Cdr_u) p_obj() **Object_s {
-	return (**Object_s)(unsafe.Pointer(&unionVar.memory))
+func (c *Cdr) get_fn() *compiled_fn {
+	return &(c._fn)
 }
-func (unionVar *Cdr_u) sym() **Symbol_s {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (**Symbol_s)(unionVar.memory)
+func (c *Cdr) set_obj(o *Object_s) {
+	c._obj = o
 }
-func (unionVar *Cdr_u) fn() *compiled_fn {
-	if unionVar.memory == nil {
-		var buffer [8]byte
-		unionVar.memory = unsafe.Pointer(&buffer)
-	}
-	return (*compiled_fn)(unionVar.memory)
+func (c *Cdr) set_sym(s *Symbol_s) {
+	c._sym = s
+}
+func (c *Cdr) set_fn(f compiled_fn) {
+	c._fn = f
 }
 
 type Object_s struct {
 	car *Object_s
-	cdr Cdr_u
+	cdr Cdr
 }
-type Object = Object_s
-
-var atomic Object
-var p_atomic *Object_s = (*Object_s)(unsafe.Pointer(&atomic))
-var compiled Object
+var symbol Object_s
+var p_symbol *Object_s = &symbol
+var compiled Object_s
 var p_compiled *Object_s = (*Object_s)(unsafe.Pointer(&compiled))
 var p_environment *Object_s = nil
 var p_nil *Object_s = nil
@@ -130,14 +129,14 @@ func nilp(list *Object_s) int8 {
 /* Whether object is an atom in the traditional Lisp sense */ //
 //
 func atomp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((nilp(list)))) != 0 || int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_atomic)))])))
+	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((nilp(list)))) != 0 || int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_symbol)))])))
 }
 
 // atomicp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:413
 /* Whether object is an atom in this implementation */ //
 //
 func atomicp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int8((noarch.NotInt8(nilp(list)))) != 0 && int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_atomic)))])))
+	return int8((int8(map[bool]int32{false: 0, true: 1}[int8((noarch.NotInt8(nilp(list)))) != 0 && int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_symbol)))])))
 }
 
 // compiledp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:418
@@ -152,7 +151,7 @@ func listp(list *Object_s) int8 {
 
 // finalp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:428
 func finalp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((listp(list)))) != 0 && int32(int8((nilp((*(*list).cdr.obj()))))) != 0])))
+	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((listp(list)))) != 0 && int32(int8((nilp((*(*list).cdr.get_obj()))))) != 0])))
 }
 
 var filename string
@@ -161,6 +160,21 @@ var max_object_write int32 = -int32(1)
 
 func assert_or_dump(srcline uint32, ok int8, obj *Object_s, what string) {
 	if ok != 0 || max_object_write != -1 {
+		return
+	}
+	fmt.Fprintf(stderr, "ERROR at %d: %s, but got:\n", lineno, what)
+	max_object_write = 10
+	object_write(stderr, obj)
+	fmt.Fprintf(stderr, "\nEnvironment:\n")
+	object_write(stderr, p_environment)
+	fmt.Fprintf(stderr, "\n/home/craig/github/LispZero/lisp-zero-single.c:%d: aborting\n", srcline)
+	stderr.Flush()
+	stdout.Flush()
+	panic("assertion failure")
+}
+
+func assert_or_dump_bool(srcline uint32, ok bool, obj *Object_s, what string) {
+	if ok || max_object_write != -1 {
 		return
 	}
 	fmt.Fprintf(stderr, "ERROR at %d: %s, but got:\n", lineno, what)
@@ -183,40 +197,42 @@ func list_car(list *Object_s) *Object_s {
 // list_cdr - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:462
 func list_cdr(list *Object_s) *Object_s {
 	assert_or_dump(uint32(int32(464)), (listp(list)), (list), "expected list")
-	return (*(*list).cdr.obj())
+	return (*(*list).cdr.get_obj())
 }
 
 // object_symbol - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:468
 func object_symbol(atom *Object_s) *Symbol_s {
 	assert_or_dump(uint32(int32(470)), (atomicp(atom)), (atom), "expected implementation atom")
-	return (*(*atom).cdr.sym())
+	return (*(*atom).cdr.get_sym())
 }
 
 // object_compiled - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:474
 func object_compiled(compiled *Object_s) compiled_fn {
 	assert_or_dump(uint32(int32(476)), (compiledp(compiled)), (compiled), "expected compiled function")
-	return compiled_fn((*(*compiled).cdr.fn()))
+	return compiled_fn((*(*compiled).cdr.get_fn()))
 }
 
-// object_new - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:480
 func object_new(car *Object_s, cdr *Object_s) *Object_s {
-	var obj *Object_s
-	new_obj := new(Object_s)
-	obj = (*Object_s)(unsafe.Pointer(new_obj))
+	obj := new(Object_s)
 	allocations += 1
-	(*obj).car = car
-	(*(*obj).cdr.obj()) = cdr
+	obj.car = car
+	obj.cdr.set_obj(cdr)
 	return obj
 }
 
-// object_new_compiled - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:497
-func object_new_compiled(fn compiled_fn) *Object_s {
-	var obj *Object_s
-	new_obj := new(Object_s)
-	obj = (*Object_s)(unsafe.Pointer(new_obj))
+func object_new_symbol(sym *Symbol_s) *Object_s {
+	obj := new(Object_s)
 	allocations += 1
-	(*obj).car = p_compiled
-	(*(*obj).cdr.fn()) = fn
+	obj.car = p_symbol
+	obj.cdr.set_sym(sym)
+	return obj
+}
+
+func object_new_compiled(fn compiled_fn) *Object_s {
+	obj := new(Object_s)
+	allocations += 1
+	obj.car = p_compiled
+	obj.cdr.set_fn(fn)
 	return obj
 }
 
@@ -430,7 +446,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	}
 	if token == "'" {
 		var tmp *Object_s = object_read(input, buf)
-		return object_new(object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_quote)))), object_new(tmp, p_nil))
+		return object_new(object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_quote)))), object_new(tmp, p_nil))
 	}
 	if token == ")" {
 		fmt.Fprintf(stderr, "unbalanced close paren\n")
@@ -441,7 +457,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 		fmt.Fprintf(stderr, "%s:%d: Seen `%s'.\n", filename, lineno, token)
 		stderr.Flush()
 	}
-	return object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(token)))))
+	return object_new_symbol((*Symbol_s)(unsafe.Pointer((symbol_sym(token)))))
 }
 
 func list_read_recursive(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
@@ -489,7 +505,7 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 
 		cur = object_new(object_read(input, buf), nil)
 		*next = cur
-		next = (cur.cdr.obj())
+		next = cur.cdr.get_obj()
 	}
 
 	return first
@@ -519,7 +535,11 @@ func object_write(output *bufio.Writer, obj *Object_s) {
 		return
 	}
 	if int8((atomicp(obj))) != 0 {
-		fmt.Fprintf(output, "%s", symbol_name(object_symbol(obj)))
+		if object_symbol(obj) == nil {
+			fmt.Fprintf(output, "--")
+		} else {
+			fmt.Fprintf(output, "%s", symbol_name(object_symbol(obj)))
+		}
 		return
 	}
 	if int8((compiledp(obj))) != 0 {
@@ -585,6 +605,7 @@ func eval(what string, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_
 		var func_ *Object_s = eval(what, list_car(exp), env)
 		var forms *Object_s = list_cdr(exp)
 		if int8((atomp(list_car(exp)))) != 0 {
+			assert_or_dump_bool(uint32(int32(910)), object_symbol(list_car(exp)) != nil, (exp), "expected symbol in 2nd arg's car")
 			what = symbol_name(object_symbol(list_car(exp)))
 		}
 		if int8((compiledp(func_))) != 0 {
@@ -687,7 +708,7 @@ func f_atom(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 		var arg *Object_s = eval(what, list_car(args), env)
 		return func() *Object_s {
 			if int32(int8((atomp(arg)))) != 0 {
-				return object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_t))))
+				return object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_t))))
 			} else {
 				return p_nil
 			}
@@ -709,14 +730,14 @@ func f_eq(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object
 		assert_or_dump(uint32(int32(1051)), (atomp(left)), (left), "expected Lisp atom")
 		assert_or_dump(uint32(int32(1052)), (atomp(right)), (right), "expected Lisp atom")
 		if int64(uintptr(unsafe.Pointer(left))) == int64(uintptr(unsafe.Pointer(right))) {
-			return object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_t))))
+			return object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_t))))
 		}
 		if int32(int8((nilp(left)))) != 0 || int32(int8((nilp(right)))) != 0 {
 			return p_nil
 		}
 		return func() *Object_s {
 			if int64(uintptr(unsafe.Pointer(object_symbol(left)))) == int64(uintptr(unsafe.Pointer(object_symbol(right)))) {
-				return object_new(p_atomic, (*Object_s)(unsafe.Pointer((p_sym_t))))
+				return object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_t))))
 			} else {
 				return p_nil
 			}
@@ -814,7 +835,7 @@ func f_defglobal(what string, args *Object_s, env *Object_s) *Object_s {
 			var sym *Object_s = eval(what, list_car(args), env)
 			var form *Object_s = eval(what, list_car(list_cdr(args)), env)
 			assert_or_dump(uint32(int32(1159)), (atomicp(sym)), (sym), "expected WHAT??")
-			p_environment = object_new(binding_new((object_new(p_atomic, (*Object_s)(unsafe.Pointer((object_symbol(sym)))))), (form)), (p_environment))
+			p_environment = object_new(binding_new((object_new_symbol((*Symbol_s)(unsafe.Pointer((object_symbol(sym)))))), (form)), (p_environment))
 		}
 	}
 	return p_nil
@@ -888,7 +909,7 @@ func f_dot_symbol_dump(what string, args *Object_s, env *Object_s) *Object_s {
 // initialize_builtin - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1232
 func initialize_builtin(sym string, fn compiled_fn) *Object_s {
 	var tmp *Object_s
-	p_environment = object_new(binding_new((object_new(p_atomic, (*Object_s)(unsafe.Pointer((symbol_sym(sym)))))), (func() *Object_s {
+	p_environment = object_new(binding_new((object_new_symbol((*Symbol_s)(unsafe.Pointer((symbol_sym(sym)))))), (func() *Object_s {
 		tmp = object_new_compiled(compiled_fn(fn))
 		return tmp
 	}())), (p_environment))
@@ -963,6 +984,16 @@ func main() {
 
 	initialize()
 
+	if dump_symbols {
+		fmt.Printf("Symbols:\n");
+		symbol_dump()
+	}
+
+	if dump_environment {
+		fmt.Printf("Environment:\n");
+		object_write(stdout, p_environment)
+	}
+
 	for {
 		var obj *Object_s = eval(filename, object_read(in, buf), p_environment)
 		if !quiet {
@@ -1004,6 +1035,8 @@ func init() {
 	flag.IntVar(&inBufSize, "inbufsize", 4096, "Input buffer size to use")
 	flag.BoolVar(&quiet, "q", false, "quiet; do not print top-level eval results")
 	flag.BoolVar(&tracing, "t", false, "print diagnostic trace during evaluation")
+	flag.BoolVar(&dump_symbols, "S", false, "dump symbols after initialization but before reading any forms")
+	flag.BoolVar(&dump_environment, "E", false, "dump environment after initialization but before reading any forms")
 
 	stdin = os.Stdin
 	stdout = bufio.NewWriter(os.Stdout)
