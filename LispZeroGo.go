@@ -12,9 +12,7 @@ import "os"
 import "runtime"
 import "runtime/pprof"
 import "strings"
-import "unsafe"
-
-const _ISspace uint16 = ((1 << 5) << 8)
+import "unicode"
 
 var stdin *os.File
 var stdout *bufio.Writer
@@ -84,7 +82,7 @@ type Object_s struct {
 var symbol Object_s
 var p_symbol *Object_s = &symbol
 var compiled Object_s
-var p_compiled *Object_s = (*Object_s)(unsafe.Pointer(&compiled))
+var p_compiled *Object_s = &compiled
 var p_environment *Object_s = nil
 var p_nil *Object_s = nil
 var p_quote *Object_s = nil
@@ -99,49 +97,41 @@ var p_apply *Object_s = nil
 var p_defglobal *Object_s = nil
 var p_dot_symbol_dump *Object_s = nil
 
-// nilp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:401
-/* Forward references. */ //
-/* Objects (lists, atoms, etc.). */ //
-/* Head item in this list, unless a BUILTIN_CAR node. */ //
-/* Tail list, unless car is a BUILTIN_CAR node. */ //
-/* If CAR of an Object is not one of these, it is a List. */ //
-/* Object.cdr is a struct Symbol_s *. */ //
-/* Object.cdr is a compiled_fn. */ //
-/* Current evaluation environment (list of bindings). */ //
-/* Input/output as (). */ //
-/* Also input as '. */ //
-//
-func nilp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int64(uintptr(unsafe.Pointer(list))) == int64(uintptr(unsafe.Pointer(p_nil)))])))
+/* Forward references. */
+/* Objects (lists, atoms, etc.). */
+/* Head item in this list, unless a BUILTIN_CAR node. */
+/* Tail list, unless car is a BUILTIN_CAR node. */
+/* If CAR of an Object is not one of these, it is a List. */
+/* Object.cdr is a struct Symbol_s *. */
+/* Object.cdr is a compiled_fn. */
+/* Current evaluation environment (list of bindings). */
+/* Input/output as (). */
+/* Also input as '. */
+
+func nilp(list *Object_s) bool {
+	return list == p_nil
 }
 
-// atomp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:407
 /* Whether object is an atom in the traditional Lisp sense */ //
-//
-func atomp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((nilp(list)))) != 0 || int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_symbol)))])))
+func atomp(list *Object_s) bool {
+	return nilp(list) || (*list).car == p_symbol
 }
 
-// atomicp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:413
 /* Whether object is an atom in this implementation */ //
-//
-func atomicp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int8((noarch.NotInt8(nilp(list)))) != 0 && int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_symbol)))])))
+func atomicp(list *Object_s) bool {
+	return !nilp(list) && (*list).car == p_symbol
 }
 
-// compiledp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:418
-func compiledp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int8((noarch.NotInt8(atomp(list)))) != 0 && int64(uintptr(unsafe.Pointer((*list).car))) == int64(uintptr(unsafe.Pointer(p_compiled)))])))
+func compiledp(list *Object_s) bool {
+	return !atomp(list) && (*list).car == p_compiled
 }
 
-// listp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:423
-func listp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int8((noarch.NotInt8(atomp(list)))) != 0 && int8((noarch.NotInt8(compiledp(list)))) != 0])))
+func listp(list *Object_s) bool {
+	return !atomp(list) && !compiledp(list)
 }
 
-// finalp - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:428
-func finalp(list *Object_s) int8 {
-	return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((listp(list)))) != 0 && int32(int8((nilp((*(*list).cdr.get_obj()))))) != 0])))
+func finalp(list *Object_s) bool {
+	return listp(list) && nilp(list_cdr(list))
 }
 
 var filename string
@@ -180,25 +170,25 @@ func assert_or_dump_bool(srcline uint32, ok bool, obj *Object_s, what string) {
 
 // list_car - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:456
 func list_car(list *Object_s) *Object_s {
-	assert_or_dump(uint32(int32(458)), (listp(list)), (list), "expected list")
+	assert_or_dump_bool(uint32(int32(458)), (listp(list)), (list), "expected list")
 	return (*list).car
 }
 
 // list_cdr - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:462
 func list_cdr(list *Object_s) *Object_s {
-	assert_or_dump(uint32(int32(464)), (listp(list)), (list), "expected list")
+	assert_or_dump_bool(uint32(int32(464)), (listp(list)), (list), "expected list")
 	return (*(*list).cdr.get_obj())
 }
 
 // object_symbol - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:468
 func object_symbol(atom *Object_s) *Symbol_s {
-	assert_or_dump(uint32(int32(470)), (atomicp(atom)), (atom), "expected implementation atom")
+	assert_or_dump_bool(uint32(int32(470)), (atomicp(atom)), (atom), "expected implementation atom")
 	return (*(*atom).cdr.get_sym())
 }
 
 // object_compiled - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:474
 func object_compiled(compiled *Object_s) compiled_fn {
-	assert_or_dump(uint32(int32(476)), (compiledp(compiled)), (compiled), "expected compiled function")
+	assert_or_dump_bool(uint32(int32(476)), (compiledp(compiled)), (compiled), "expected compiled function")
 	return compiled_fn((*(*compiled).cdr.get_fn()))
 }
 
@@ -249,10 +239,6 @@ func symbol_name(s *Symbol_s) string {
 	return s.n
 }
 
-func symbol_name_as_bytes(s *Symbol_s) *byte {
-	return (*byte)(unsafe.Pointer(&s.n))
-}
-
 var symbol_strdup int8 = int8((int8(int32(1))))
 
 // symbol_sym - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:551
@@ -280,7 +266,7 @@ var p_sym_quote *Symbol_s = nil
 /* Environment (bindings). */ //
 //
 func binding_new(sym *Object_s, val *Object_s) *Object_s {
-	assert_or_dump(uint32(int32(583)), (atomicp(sym)), (sym), "expected implementation atom")
+	assert_or_dump_bool(uint32(int32(583)), (atomicp(sym)), (sym), "expected implementation atom")
 	return object_new(sym, val)
 }
 
@@ -294,7 +280,7 @@ func binding_new(sym *Object_s, val *Object_s) *Object_s {
 */ //
 //
 func binding_lookup(what string, key *Symbol_s, bindings *Object_s) *Object_s {
-	if int8((nilp(bindings))) != 0 {
+	if nilp(bindings) {
 		return p_nil
 	}
 	if tracing {
@@ -304,15 +290,15 @@ func binding_lookup(what string, key *Symbol_s, bindings *Object_s) *Object_s {
 		max_object_write = -int32(1)
 		io.WriteString(stderr,"\n\n")
 	}
-	for ; int8((noarch.NotInt8(nilp(bindings)))) != 0; bindings = list_cdr(bindings) {
-		assert_or_dump(uint32(int32(616)), (listp(bindings)), (bindings), "expected list")
+	for ; !nilp(bindings); bindings = list_cdr(bindings) {
+		assert_or_dump_bool(uint32(int32(616)), (listp(bindings)), (bindings), "expected list")
 		var binding *Object_s = list_car(bindings)
-		if int32(int8((atomicp(binding)))) != 0 && int64(uintptr(unsafe.Pointer(object_symbol(binding)))) == int64(uintptr(unsafe.Pointer(key))) {
+		if atomicp(binding) && object_symbol(binding) == key {
 			return p_nil
 		}
 		{
 			var symbol *Object_s = list_car(binding)
-			if int32(int8((atomicp(symbol)))) != 0 && int64(uintptr(unsafe.Pointer(object_symbol(symbol)))) == int64(uintptr(unsafe.Pointer(key))) {
+			if atomicp(symbol) && object_symbol(symbol) == key {
 				return binding
 			}
 		}
@@ -341,22 +327,22 @@ func token_putback(token string) {
 	lookahead_valid = true
 }
 
-func my_getc(input *bufio.Reader) int32 {
+func my_getc(input *bufio.Reader) rune {
 	b, err := input.ReadByte()
 	if err == io.EOF {
 		return -1
 	}
 	check(err)
-	return (int32)(b)
+	return (rune)(b)
 }
 
-func my_ungetc(ch int32, input *bufio.Reader) {
+func my_ungetc(ch rune, input *bufio.Reader) {
 	input.UnreadByte()
 }
 
 // token_get - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:707
 func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
-	var ch int32
+	var ch rune
 
 	buf.Reset()
 
@@ -372,26 +358,23 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 		}()) == -int32(1) {
 			my_exit(0)
 		}
-		if ch == int32(';') {
+		if ch == ';' {
 			for (func() int32 {
 				tempVar := my_getc(input)
 				ch = tempVar
 				return tempVar
-			}()) != -int32(1) && ch != int32('\n') {
+			}()) != -int32(1) && ch != rune('\n') {
 			}
 		}
-		if ch == int32('\n') {
+		if ch == '\n' {
 			lineno += 1
 		}
-		if noarch.NotInt32((int32(*((*uint16)(func() unsafe.Pointer {
-			tempVar := (*linux.CtypeLoc())
-			return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)((ch))*unsafe.Sizeof(*tempVar))
-		}()))) & int32(uint16(_ISspace)))) != 0 {
+		if !unicode.IsSpace(ch) {
 			break
 		}
 	}
 	buffer_append(buf, byte(ch))
-	if noarch.Strchr((&[]byte("()'\x00")[0]), ch) != nil {
+	if strings.IndexRune("()'", ch) != -1 {
 		return buffer_to_string(buf)
 	}
 	for {
@@ -402,10 +385,7 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 		}()) == -int32(1) {
 			my_exit(0)
 		}
-		if noarch.Strchr((&[]byte("()'\x00")[0]), ch) != nil || int32(*((*uint16)(func() unsafe.Pointer {
-			tempVar := (*linux.CtypeLoc())
-			return unsafe.Pointer(uintptr(unsafe.Pointer(tempVar)) + (uintptr)((ch))*unsafe.Sizeof(*tempVar))
-		}())))&int32(uint16(_ISspace)) != 0 {
+		if strings.IndexRune("()'", ch) != -1 || unicode.IsSpace(ch) {
 			my_ungetc(ch, input)
 			return buffer_to_string(buf)
 		}
@@ -415,20 +395,6 @@ func token_get(input *bufio.Reader, buf *bytes.Buffer) string {
 
 var latest_lineno uint32
 
-func cstr_to_string(token *byte) string {
-	var tokbuf strings.Builder
-	var p unsafe.Pointer = unsafe.Pointer(token)
-	for {
-		if (*((*byte) (p))) == 0 {
-			break
-		}
-		tokbuf.WriteByte(*((*byte) (p)))
-		p = unsafe.Pointer(uintptr(unsafe.Pointer(p)) + 1)
-	}
-	return tokbuf.String()
-}
-
-// object_read - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:751
 func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	token := token_get(input, buf)
 	if token == "(" {
@@ -436,7 +402,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 	}
 	if token == "'" {
 		var tmp *Object_s = object_read(input, buf)
-		return object_new(object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_quote)))), object_new(tmp, p_nil))
+		return object_new(object_new_symbol(p_sym_quote), object_new(tmp, p_nil))
 	}
 	if token == ")" {
 		fmt.Fprintf(stderr, "unbalanced close paren\n")
@@ -447,7 +413,7 @@ func object_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 		fmt.Fprintf(stderr, "%s:%d: Seen `%s'.\n", filename, lineno, token)
 		stderr.Flush()
 	}
-	return object_new_symbol((*Symbol_s)(unsafe.Pointer((symbol_sym(token)))))
+	return object_new_symbol(symbol_sym(token))
 }
 
 func list_read_recursive(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
@@ -506,25 +472,25 @@ func list_read(input *bufio.Reader, buf *bytes.Buffer) *Object_s {
 /* true if object is (quote arg) */ //
 /* TODO: Decide whether this look up quote in the current env to do the check */ //
 //
-func quotep(obj *Object_s) (c2goDefaultReturn int8) {
-	if int8((noarch.NotInt8(listp(obj)))) != 0 || int8((noarch.NotInt8(finalp(list_cdr(obj))))) != 0 {
-		return int8((int8(int32(0))))
+func quotep(obj *Object_s) bool {
+	if !listp(obj) || !finalp(list_cdr(obj)) {
+		return false
 	}
 	{
 		var car *Object_s = list_car(obj)
-		return int8((int8(map[bool]int32{false: 0, true: 1}[int32(int8((compiledp(car)))) != 0 && int64(uintptr(noarch.CastInterfaceToPointer((func(string, *Object_s, *Object_s) *Object_s)((object_compiled(car)))))) == int64(uintptr(noarch.CastInterfaceToPointer(f_quote)))])))
+		return compiledp(car) && noarch.CastInterfaceToPointer((func(string, *Object_s, *Object_s) *Object_s)(object_compiled(car))) == noarch.CastInterfaceToPointer(f_quote)
+		// int64(uintptr(noarch.CastInterfaceToPointer((func(string, *Object_s, *Object_s) *Object_s)
 	}
-	return
 }
 
 /* TODO: Print name of function. */
 func object_write(output *bufio.Writer, obj *Object_s) {
 	stderr.Flush()
-	if int8((nilp(obj))) != 0 {
+	if nilp(obj) {
 		fmt.Fprintf(output, "()")
 		return
 	}
-	if int8((atomicp(obj))) != 0 {
+	if atomicp(obj) {
 		if object_symbol(obj) == nil {
 			fmt.Fprintf(output, "--")
 		} else {
@@ -532,11 +498,11 @@ func object_write(output *bufio.Writer, obj *Object_s) {
 		}
 		return
 	}
-	if int8((compiledp(obj))) != 0 {
+	if compiledp(obj) {
 		fmt.Fprintf(output, "*COMPILED*")
 		return
 	}
-	if int8((quotep(obj))) != 0 {
+	if quotep(obj) {
 		fmt.Fprintf(output, "'")
 		object_write(output, list_car(list_cdr(obj)))
 		return
@@ -551,12 +517,12 @@ func object_write(output *bufio.Writer, obj *Object_s) {
 	fmt.Fprintf(output, "(")
 	for {
 		object_write(output, list_car(obj))
-		if int8((finalp(obj))) != 0 {
+		if finalp(obj) {
 			fmt.Fprintf(output, ")")
 			return
 		}
 		obj = list_cdr(obj)
-		if int8((noarch.NotInt8(listp(obj)))) != 0 {
+		if !listp(obj) {
 			fmt.Fprintf(output, " . ")
 			object_write(output, obj)
 			fmt.Fprintf(output, ")")
@@ -573,8 +539,9 @@ func object_write(output *bufio.Writer, obj *Object_s) {
 func binding_for(what string, sym *Symbol_s, env *Object_s) *Object_s {
 	var tmp *Object_s
 	tmp = binding_lookup(what, sym, env)
-	if int8((nilp(tmp))) != 0 {
-		assert_or_dump(908, ^nilp(tmp), env, fmt.Sprintf("Unbound symbol `%s'", symbol_name(sym)))
+	if nilp(tmp) {
+		// Test first (above) before taking time to do the fmt.Sprintf(), which is comparatively expensive.
+		assert_or_dump_bool(908, !nilp(tmp), env, fmt.Sprintf("Unbound symbol `%s'", symbol_name(sym)))
 	}
 	return list_cdr(tmp)
 }
@@ -584,21 +551,21 @@ func binding_for(what string, sym *Symbol_s, env *Object_s) *Object_s {
    our "unique" apply.  */ //
 //
 func eval(what string, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	if int32(int8((nilp(exp)))) != 0 || int32(int8((compiledp(exp)))) != 0 {
+	if nilp(exp) || compiledp(exp) {
 		return exp
 	}
-	if int8((atomicp(exp))) != 0 {
+	if atomicp(exp) {
 		return binding_for(what, object_symbol(exp), env)
 	}
-	assert_or_dump(uint32(int32(909)), (listp(exp)), (exp), "expected list")
+	assert_or_dump_bool(uint32(int32(909)), (listp(exp)), (exp), "expected list")
 	{
 		var func_ *Object_s = eval(what, list_car(exp), env)
 		var forms *Object_s = list_cdr(exp)
-		if int8((atomp(list_car(exp)))) != 0 {
+		if atomp(list_car(exp)) {
 			assert_or_dump_bool(uint32(int32(910)), object_symbol(list_car(exp)) != nil, (exp), "expected symbol in 2nd arg's car")
 			what = symbol_name(object_symbol(list_car(exp)))
 		}
-		if int8((compiledp(func_))) != 0 {
+		if compiledp(func_) {
 			var fn compiled_fn
 			fn = object_compiled(func_)
 			return fn(what, forms, env)
@@ -640,13 +607,13 @@ func eval(what string, exp *Object_s, env *Object_s) (c2goDefaultReturn *Object_
 */ //
 //
 func assert_zedbap(zedba *Object_s) {
-	assert_or_dump(uint32(int32(965)), (listp(zedba)), (zedba), "expected list")
-	assert_or_dump(uint32(int32(967)), (listp(list_car(zedba))), (zedba), "expected list with car being arglist")
-	assert_or_dump(uint32(int32(968)), (atomicp(list_car(list_car(zedba)))), (zedba), "expected zedba with 1st arg being mename")
-	assert_or_dump(uint32(int32(969)), (atomicp(list_car(list_cdr(list_car(zedba))))), (zedba), "expected zedba with 2nd arg being formlistparamname")
-	assert_or_dump(uint32(int32(970)), (atomicp(list_car(list_cdr(list_cdr(list_car(zedba)))))), (zedba), "expected zedba with 3rd arg being envparamname")
-	assert_or_dump(uint32(int32(971)), (finalp(list_cdr(list_cdr(list_car(zedba))))), (zedba), "expected zedba with only 3 args")
-	assert_or_dump(uint32(int32(973)), (finalp(list_cdr(zedba))), (zedba), "expected zedba body to be last element of zedba as list")
+	assert_or_dump_bool(uint32(int32(965)), (listp(zedba)), (zedba), "expected list")
+	assert_or_dump_bool(uint32(int32(967)), (listp(list_car(zedba))), (zedba), "expected list with car being arglist")
+	assert_or_dump_bool(uint32(int32(968)), (atomicp(list_car(list_car(zedba)))), (zedba), "expected zedba with 1st arg being mename")
+	assert_or_dump_bool(uint32(int32(969)), (atomicp(list_car(list_cdr(list_car(zedba))))), (zedba), "expected zedba with 2nd arg being formlistparamname")
+	assert_or_dump_bool(uint32(int32(970)), (atomicp(list_car(list_cdr(list_cdr(list_car(zedba)))))), (zedba), "expected zedba with 3rd arg being envparamname")
+	assert_or_dump_bool(uint32(int32(971)), (finalp(list_cdr(list_cdr(list_car(zedba))))), (zedba), "expected zedba with only 3 args")
+	assert_or_dump_bool(uint32(int32(973)), (finalp(list_cdr(zedba))), (zedba), "expected zedba body to be last element of zedba as list")
 }
 
 // apply - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:989
@@ -671,11 +638,11 @@ func apply(what string, func_ *Object_s, me *Object_s, forms *Object_s, env *Obj
 	assert_zedbap(me)
 	{
 		var params *Object_s = list_car(func_)
-		assert_or_dump(uint32(int32(1001)), (listp(params)), (params), "expected list")
+		assert_or_dump_bool(uint32(int32(1001)), (listp(params)), (params), "expected list")
 		meparamname = list_car(params)
-		assert_or_dump(uint32(int32(1005)), (listp(list_cdr(params))), (params), "expected 2-element list")
+		assert_or_dump_bool(uint32(int32(1005)), (listp(list_cdr(params))), (params), "expected 2-element list")
 		formlistparamname = list_car(list_cdr(params))
-		assert_or_dump(uint32(int32(1009)), (finalp(list_cdr(list_cdr(params)))), (params), "expected 2-element list")
+		assert_or_dump_bool(uint32(int32(1009)), (finalp(list_cdr(list_cdr(params)))), (params), "expected 2-element list")
 		envparamname = list_car(list_cdr(list_cdr(params)))
 	}
 	return eval(what, list_car(list_cdr(func_)), (object_new(binding_new((meparamname), (func_)), (object_new(binding_new((formlistparamname), (forms)), (object_new(binding_new((envparamname), (env)), (env))))))))
@@ -685,7 +652,7 @@ func apply(what string, func_ *Object_s, me *Object_s, forms *Object_s, env *Obj
 /* (quote form) => form */ //
 //
 func f_quote(what string, args *Object_s, env *Object_s) *Object_s {
-	assert_or_dump(uint32(int32(1024)), (finalp(args)), (args), "expected 1-element list")
+	assert_or_dump_bool(uint32(int32(1024)), (finalp(args)), (args), "expected 1-element list")
 	return list_car(args)
 }
 
@@ -693,12 +660,12 @@ func f_quote(what string, args *Object_s, env *Object_s) *Object_s {
 /* (atom atom) => t if atom is an atom (including nil), nil otherwise */ //
 //
 func f_atom(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1032)), (finalp(args)), (args), "expected 1-element list")
+	assert_or_dump_bool(uint32(int32(1032)), (finalp(args)), (args), "expected 1-element list")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
 		return func() *Object_s {
-			if int32(int8((atomp(arg)))) != 0 {
-				return object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_t))))
+			if atomp(arg) {
+				return object_new_symbol(p_sym_t)
 			} else {
 				return p_nil
 			}
@@ -712,22 +679,22 @@ func f_atom(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 /* All nils are equal to each other in this implementation */ //
 //
 func f_eq(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1044)), (listp(args)), (args), "expected 1-element list")
-	assert_or_dump(uint32(int32(1045)), (finalp(list_cdr(args))), (args), "expected 1-element list")
+	assert_or_dump_bool(uint32(int32(1044)), (listp(args)), (args), "expected 1-element list")
+	assert_or_dump_bool(uint32(int32(1045)), (finalp(list_cdr(args))), (args), "expected 1-element list")
 	{
 		var left *Object_s = eval(what, list_car(args), env)
 		var right *Object_s = eval(what, list_car(list_cdr(args)), env)
-		assert_or_dump(uint32(int32(1051)), (atomp(left)), (left), "expected Lisp atom")
-		assert_or_dump(uint32(int32(1052)), (atomp(right)), (right), "expected Lisp atom")
-		if int64(uintptr(unsafe.Pointer(left))) == int64(uintptr(unsafe.Pointer(right))) {
-			return object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_t))))
+		assert_or_dump_bool(uint32(int32(1051)), (atomp(left)), (left), "expected Lisp atom")
+		assert_or_dump_bool(uint32(int32(1052)), (atomp(right)), (right), "expected Lisp atom")
+		if left == right {
+			return object_new_symbol(p_sym_t)
 		}
-		if int32(int8((nilp(left)))) != 0 || int32(int8((nilp(right)))) != 0 {
+		if nilp(left) || nilp(right) {
 			return p_nil
 		}
 		return func() *Object_s {
-			if int64(uintptr(unsafe.Pointer(object_symbol(left)))) == int64(uintptr(unsafe.Pointer(object_symbol(right)))) {
-				return object_new_symbol((*Symbol_s)(unsafe.Pointer((p_sym_t))))
+			if object_symbol(left) == object_symbol(right) {
+				return object_new_symbol(p_sym_t)
 			} else {
 				return p_nil
 			}
@@ -740,8 +707,8 @@ func f_eq(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object
 /* (cons car-arg cdr-arg) => (car-arg cdr-arg) */ //
 //
 func f_cons(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1067)), (listp(args)), (args), "expected arglist for cons")
-	assert_or_dump(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected 2 arguments for cons")
+	assert_or_dump_bool(uint32(int32(1067)), (listp(args)), (args), "expected arglist for cons")
+	assert_or_dump_bool(uint32(int32(1068)), (finalp(list_cdr(args))), (args), "expected 2 arguments for cons")
 	{
 		var car *Object_s = eval(what, list_car(args), env)
 		var cdr *Object_s = eval(what, list_car(list_cdr(args)), env)
@@ -754,10 +721,10 @@ func f_cons(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
 /* (car cons-arg) : cons-arg is a list => car of cons-arg */ //
 //
 func f_car(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1081)), (finalp(args)), (args), "expected a single argument for car")
+	assert_or_dump_bool(uint32(int32(1081)), (finalp(args)), (args), "expected a single argument for car")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
-		assert_or_dump(uint32(int32(1086)), (listp(arg)), (arg), "expected a list for car")
+		assert_or_dump_bool(uint32(int32(1086)), (listp(arg)), (arg), "expected a list for car")
 		return list_car(arg)
 	}
 	return
@@ -767,10 +734,10 @@ func f_car(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Objec
 /* (cdr cons-arg) : cons-arg is a list => cdr of cons-arg */ //
 //
 func f_cdr(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1095)), (finalp(args)), (args), "expected a single argument for cdr")
+	assert_or_dump_bool(uint32(int32(1095)), (finalp(args)), (args), "expected a single argument for cdr")
 	{
 		var arg *Object_s = eval(what, list_car(args), env)
-		assert_or_dump(uint32(int32(1100)), (listp(arg)), (arg), "expected a list for cdr")
+		assert_or_dump_bool(uint32(int32(1100)), (listp(arg)), (arg), "expected a list for cdr")
 		return list_cdr(arg)
 	}
 	return
@@ -783,18 +750,18 @@ func f_cdr(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Objec
    nil. */ //
 //
 func f_cond(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	if int8((nilp(args))) != 0 {
+	if nilp(args) {
 		return p_nil
 	}
-	assert_or_dump(uint32(int32(1115)), (listp(args)), (args), "expected arglist for cond")
+	assert_or_dump_bool(uint32(int32(1115)), (listp(args)), (args), "expected arglist for cond")
 	{
 		var pair *Object_s = list_car(args)
-		assert_or_dump(uint32(int32(1120)), (listp(pair)), (pair), "expected a list for the first argument of cond")
-		assert_or_dump(uint32(int32(1121)), (finalp(list_cdr(pair))), (pair), "expected a 2-item list for each item in cond arglist")
+		assert_or_dump_bool(uint32(int32(1120)), (listp(pair)), (pair), "expected a list for the first argument of cond")
+		assert_or_dump_bool(uint32(int32(1121)), (finalp(list_cdr(pair))), (pair), "expected a 2-item list for each item in cond arglist")
 		{
 			var if_arg *Object_s = list_car(pair)
 			var then_form *Object_s = list_car(list_cdr(pair))
-			if int8((noarch.NotInt8(nilp(eval(what, if_arg, env))))) != 0 {
+			if !nilp(eval(what, if_arg, env)) {
 				return eval(what, then_form, env)
 			}
 			return f_cond(what, list_cdr(args), env)
@@ -813,19 +780,19 @@ func f_cond(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obje
    E.g. (defglobal (cdr (defglobal))) pops off the top binding. */ //
 //
 func f_defglobal(what string, args *Object_s, env *Object_s) *Object_s {
-	if int8((nilp(args))) != 0 {
+	if nilp(args) {
 		return p_environment
 	}
-	assert_or_dump(uint32(int32(1145)), (listp(args)), (args), "expected WHAT??")
-	if int8((nilp(list_cdr(args)))) != 0 {
+	assert_or_dump_bool(uint32(int32(1145)), (listp(args)), (args), "expected WHAT??")
+	if nilp(list_cdr(args)) {
 		p_environment = eval(what, list_car(args), env)
 	} else {
-		assert_or_dump(uint32(int32(1153)), (finalp(list_cdr(args))), (args), "expected WHAT??")
+		assert_or_dump_bool(uint32(int32(1153)), (finalp(list_cdr(args))), (args), "expected WHAT??")
 		{
 			var sym *Object_s = eval(what, list_car(args), env)
 			var form *Object_s = eval(what, list_car(list_cdr(args)), env)
-			assert_or_dump(uint32(int32(1159)), (atomicp(sym)), (sym), "expected WHAT??")
-			p_environment = object_new(binding_new((object_new_symbol((*Symbol_s)(unsafe.Pointer((object_symbol(sym)))))), (form)), (p_environment))
+			assert_or_dump_bool(uint32(int32(1159)), (atomicp(sym)), (sym), "expected WHAT??")
+			p_environment = object_new(binding_new((object_new_symbol(object_symbol(sym))), (form)), (p_environment))
 		}
 	}
 	return p_nil
@@ -838,10 +805,10 @@ func f_defglobal(what string, args *Object_s, env *Object_s) *Object_s {
    and so mess up the tracefiles. */ //
 //
 func f_eval(what string, args *Object_s, env *Object_s) *Object_s {
-	assert_or_dump(uint32(int32(1173)), (listp(args)), (args), "expected WHAT??")
-	assert_or_dump(uint32(int32(1174)), int8((int8((map[bool]int32{false: 0, true: 1}[int32(int8((nilp(list_cdr(args))))) != 0 || int32(int8((finalp(list_cdr(args))))) != 0])))), (args), "expected WHAT??")
+	assert_or_dump_bool(uint32(int32(1173)), (listp(args)), (args), "expected arglist for eval")
+	assert_or_dump_bool(uint32(int32(1174)), nilp(list_cdr(args)) || finalp(list_cdr(args)), (args), "expected no more than two arguments for eval")
 	var n_env *Object_s = func() *Object_s {
-		if int32(int8((nilp(list_cdr(args))))) != 0 {
+		if nilp(list_cdr(args)) {
 			return env
 		} else {
 			return eval(what, list_car(list_cdr(args)), env)
@@ -856,26 +823,26 @@ func f_eval(what string, args *Object_s, env *Object_s) *Object_s {
    environment for such bindings (default is current env) */ //
 //
 func f_apply(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Object_s) {
-	assert_or_dump(uint32(int32(1189)), (listp(args)), (args), "expected WHAT??")
+	assert_or_dump_bool(uint32(int32(1189)), (listp(args)), (args), "expected WHAT??")
 	{
 		var func_ *Object_s = eval(what, list_car(args), env)
 		var rest *Object_s = list_cdr(args)
-		if int8((atomp(list_car(args)))) != 0 {
+		if atomp(list_car(args)) {
 			what = symbol_name(object_symbol(list_car(args)))
 		}
-		assert_or_dump(uint32(int32(1200)), (listp(rest)), (rest), "expected WHAT??")
+		assert_or_dump_bool(uint32(int32(1200)), (listp(rest)), (rest), "expected WHAT??")
 		{
 			var me *Object_s = eval(what, list_car(rest), env)
 			var new_rest *Object_s = list_cdr(rest)
 			rest = new_rest
-			assert_or_dump(uint32(int32(1207)), (listp(rest)), (rest), "expected WHAT??")
+			assert_or_dump_bool(uint32(int32(1207)), (listp(rest)), (rest), "expected WHAT??")
 			{
 				var forms *Object_s = eval(what, list_car(rest), env)
 				var new_rest *Object_s = list_cdr(rest)
 				rest = new_rest
-				assert_or_dump(uint32(int32(1214)), int8((int8((map[bool]int32{false: 0, true: 1}[int32(int8((nilp(rest)))) != 0 || int32(int8((finalp(rest)))) != 0])))), (rest), "expected WHAT??")
+				assert_or_dump_bool(uint32(int32(1214)), nilp(rest) || finalp(rest), (rest), "expected WHAT??")
 				return apply(what, func_, me, forms, func() *Object_s {
-					if int32(int8((nilp(rest)))) != 0 {
+					if nilp(rest) {
 						return p_nil
 					} else {
 						return eval(what, list_car(rest), env)
@@ -891,7 +858,7 @@ func f_apply(what string, args *Object_s, env *Object_s) (c2goDefaultReturn *Obj
 /* (.symbol_dump) : dump symbol names along with their struct Symbol_s * objects */ //
 //
 func f_dot_symbol_dump(what string, args *Object_s, env *Object_s) *Object_s {
-	assert_or_dump(uint32(int32(1225)), int8((int8((map[bool]int32{false: 0, true: 1}[args == nil])))), (args), "expected WHAT??")
+	assert_or_dump_bool(uint32(int32(1225)), args == nil, (args), "expected no arguments to .symbol_dump")
 	symbol_dump()
 	return p_nil
 }
@@ -899,7 +866,7 @@ func f_dot_symbol_dump(what string, args *Object_s, env *Object_s) *Object_s {
 // initialize_builtin - transpiled function from  /home/craig/github/LispZero/lisp-zero-single.c:1232
 func initialize_builtin(sym string, fn compiled_fn) *Object_s {
 	var tmp *Object_s
-	p_environment = object_new(binding_new((object_new_symbol((*Symbol_s)(unsafe.Pointer((symbol_sym(sym)))))), (func() *Object_s {
+	p_environment = object_new(binding_new((object_new_symbol(symbol_sym(sym))), (func() *Object_s {
 		tmp = object_new_compiled(compiled_fn(fn))
 		return tmp
 	}())), (p_environment))
